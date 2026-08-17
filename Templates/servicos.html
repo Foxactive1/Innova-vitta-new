@@ -1,0 +1,361 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="container-fluid mt-4">
+
+    <!-- Cabeçalho -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+
+        <div>
+            <h2 class="mb-1">
+                <i class="bi bi-cash-coin me-2"></i>
+                Serviços
+            </h2>
+
+            <p class="text-muted mb-0">
+                Gerencie os serviços e valores da clínica.
+            </p>
+        </div>
+
+        <a href="{{ url_for('servicos.novo_servico') }}"
+           class="btn btn-success mt-2 mt-md-0">
+
+            <i class="bi bi-plus-lg me-1"></i>
+            Novo Serviço
+
+        </a>
+
+    </div>
+
+
+    <!-- Filtros -->
+
+    <div class="card shadow-sm mb-4">
+
+        <div class="card-body">
+
+            <form method="get">
+
+                <div class="row g-3">
+
+                    <div class="col-md-5">
+
+                        <label class="form-label">
+                            Buscar
+                        </label>
+
+                        <div class="input-group">
+
+                            <span class="input-group-text">
+                                <i class="bi bi-search"></i>
+                            </span>
+
+                            <input
+                                type="text"
+                                name="busca"
+                                class="form-control"
+                                placeholder="Nome do serviço..."
+                                value="{{ busca }}"
+                            >
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="col-md-4">
+
+                        <label class="form-label">
+                            Categoria
+                        </label>
+
+                        <select
+                            name="categoria"
+                            class="form-select"
+                        >
+
+                            <option value="">
+                                Todas as categorias
+                            </option>
+
+                            {% for cat in categorias %}
+
+                            <option
+                                value="{{ cat }}"
+                                {% if categoria == cat %}selected{% endif %}
+                            >
+                                {{ cat }}
+                            </option>
+
+                            {% endfor %}
+
+                        </select>
+
+                    </div>
+
+
+                    <div class="col-md-3 d-flex align-items-end">
+
+                        <button
+                            type="submit"
+                            class="btn btn-primary w-100"
+                        >
+                            <i class="bi bi-funnel me-1"></i>
+                            Filtrar
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+
+    <!-- Tabela -->
+
+    <div class="card shadow-sm">
+
+        <div class="card-body p-0">
+
+            {% if servicos.items %}
+
+            <div class="table-responsive">
+
+                <table class="table table-hover align-middle mb-0">
+
+                    <thead class="table-light">
+
+                        <tr>
+
+                            <th>Serviço</th>
+                            <th>Categoria</th>
+                            <th>Descrição</th>
+                            <th class="text-end">Valor</th>
+                            <th class="text-center">Status</th>
+                            <th class="text-end">Ações</th>
+
+                        </tr>
+
+                    </thead>
+
+                    <tbody>
+
+                        {% for servico in servicos.items %}
+
+                        <tr>
+
+                            <td>
+                                <strong>
+                                    {{ servico.nome }}
+                                </strong>
+                            </td>
+
+
+                            <td>
+
+                                <span class="badge bg-secondary">
+                                    {{ servico.categoria }}
+                                </span>
+
+                            </td>
+
+
+                            <td>
+
+                                {% if servico.descricao %}
+
+                                    <span class="text-muted">
+                                        {{ servico.descricao }}
+                                    </span>
+
+                                {% else %}
+
+                                    <span class="text-muted">
+                                        —
+                                    </span>
+
+                                {% endif %}
+
+                            </td>
+
+
+                            <td class="text-end">
+
+                                <strong class="text-success">
+
+                                    R$
+                                    {{ "%.2f"|format(
+                                        servico.valor|float
+                                    )|replace('.', ',') }}
+
+                                </strong>
+
+                            </td>
+
+
+                            <td class="text-center">
+
+                                {% if servico.ativo %}
+
+                                    <span class="badge bg-success">
+                                        Ativo
+                                    </span>
+
+                                {% else %}
+
+                                    <span class="badge bg-secondary">
+                                        Inativo
+                                    </span>
+
+                                {% endif %}
+
+                            </td>
+
+
+                            <td class="text-end">
+
+                                <div class="btn-group">
+
+                                    <a
+                                        href="{{ url_for(
+                                            'servicos.editar_servico',
+                                            sid=servico.id
+                                        ) }}"
+                                        class="btn btn-sm btn-outline-primary"
+                                        title="Editar"
+                                    >
+
+                                        <i class="bi bi-pencil"></i>
+
+                                    </a>
+
+
+                                    <form
+                                        method="post"
+                                        action="{{ url_for(
+                                            'servicos.alternar_servico',
+                                            sid=servico.id
+                                        ) }}"
+                                        class="d-inline"
+                                    >
+
+                                        <button
+                                            type="submit"
+                                            class="btn btn-sm btn-outline-warning"
+                                            title="Ativar/Desativar"
+                                        >
+
+                                            {% if servico.ativo %}
+
+                                                <i class="bi bi-toggle-on"></i>
+
+                                            {% else %}
+
+                                                <i class="bi bi-toggle-off"></i>
+
+                                            {% endif %}
+
+                                        </button>
+
+                                    </form>
+
+
+                                    <form
+                                        method="post"
+                                        action="{{ url_for(
+                                            'servicos.excluir_servico',
+                                            sid=servico.id
+                                        ) }}"
+                                        class="d-inline"
+                                        onsubmit="return confirm(
+                                            'Deseja realmente excluir este serviço?'
+                                        );"
+                                    >
+
+                                        <button
+                                            type="submit"
+                                            class="btn btn-sm btn-outline-danger"
+                                            title="Excluir"
+                                        >
+
+                                            <i class="bi bi-trash"></i>
+
+                                        </button>
+
+                                    </form>
+
+                                </div>
+
+                            </td>
+
+                        </tr>
+
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+            <!-- Paginação -->
+            {% if servicos.pages > 1 %}
+            <div class="card-footer bg-white">
+                <nav aria-label="Navegação de páginas">
+                    <ul class="pagination justify-content-center mb-0">
+                        <li class="page-item {{ 'disabled' if not servicos.has_prev }}">
+                            <a class="page-link" href="?page={{ servicos.prev_num }}&busca={{ busca }}&categoria={{ categoria }}">Anterior</a>
+                        </li>
+                        {% for p in servicos.iter_pages() %}
+                            <li class="page-item {{ 'active' if p == servicos.page }}">
+                                <a class="page-link" href="?page={{ p }}&busca={{ busca }}&categoria={{ categoria }}">{{ p }}</a>
+                            </li>
+                        {% endfor %}
+                        <li class="page-item {{ 'disabled' if not servicos.has_next }}">
+                            <a class="page-link" href="?page={{ servicos.next_num }}&busca={{ busca }}&categoria={{ categoria }}">Próxima</a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+            {% endif %}
+
+            {% else %}
+
+            <div class="text-center p-5">
+
+                <i class="bi bi-cash-stack display-4 text-muted"></i>
+
+                <h5 class="mt-3">
+                    Nenhum serviço encontrado
+                </h5>
+
+                <p class="text-muted">
+                    Cadastre o primeiro serviço da clínica.
+                </p>
+
+                <a
+                    href="{{ url_for('servicos.novo_servico') }}"
+                    class="btn btn-success"
+                >
+
+                    <i class="bi bi-plus-lg me-1"></i>
+                    Cadastrar Serviço
+
+                </a>
+
+            </div>
+
+            {% endif %}
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

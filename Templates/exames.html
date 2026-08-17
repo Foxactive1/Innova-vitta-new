@@ -1,0 +1,140 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h3><i class="bi bi-clipboard2-pulse me-2"></i>Exames</h3>
+    <a href="/exames/novo" class="btn btn-info text-white">
+      <i class="bi bi-clipboard2-plus me-1"></i>Novo Exame
+    </a>
+  </div>
+
+  <!-- Filtros -->
+  <div class="card shadow-sm mb-4">
+    <div class="card-body">
+      <form method="get" action="/exames/" class="row g-2">
+        <div class="col-md-4">
+          <select class="form-select" name="status">
+            <option value="">Todos os status</option>
+            <option value="agendado" {{ 'selected' if status == 'agendado' else '' }}>Agendado</option>
+            <option value="realizado" {{ 'selected' if status == 'realizado' else '' }}>Realizado</option>
+            <option value="cancelado" {{ 'selected' if status == 'cancelado' else '' }}>Cancelado</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <button type="submit" class="btn btn-primary"><i class="bi bi-funnel me-1"></i>Filtrar</button>
+          <a href="/exames/" class="btn btn-outline-secondary">Limpar</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="card shadow-sm">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Data</th>
+            <th>Paciente</th>
+            <th>Tipo</th>
+            <th>Descrição</th>
+            <th>Status</th>
+            <th width="200">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for e in exames.items %}
+          <tr>
+            <td>{{ e.data.strftime('%d/%m/%Y %H:%M') if e.data else '—' }}</td>
+            <td><strong>{{ e.paciente_exame.nome if e.paciente_exame else '—' }}</strong></td>
+            <td>{{ e.tipo }}</td>
+            <td>{{ e.descricao or '—' }}</td>
+            <td>
+              <span class="badge bg-{{ 'secondary' if e.status == 'agendado' else 'success' if e.status == 'realizado' else 'danger' }}">
+                {{ e.status }}
+              </span>
+            </td>
+            <td>
+              {% if e.status == 'agendado' %}
+              <button class="btn btn-sm btn-outline-success"
+                data-bs-toggle="modal" data-bs-target="#resultadoModal"
+                data-exame-id="{{ e.id }}"
+                data-exame-tipo="{{ e.tipo }}"
+                data-exame-paciente="{{ e.paciente_exame.nome if e.paciente_exame else '—' }}">
+                <i class="bi bi-check-lg me-1"></i>Resultado
+              </button>
+              <form method="post" action="/exames/{{ e.id }}/cancelar" class="d-inline" onsubmit="return confirm('Cancelar exame?')">
+                <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-x-lg"></i></button>
+              </form>
+              {% endif %}
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="6" class="text-center text-muted py-4">Nenhum exame encontrado</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <!-- Paginação -->
+    {% if exames.pages > 1 %}
+    <div class="card-footer bg-white">
+      <nav aria-label="Navegação de páginas">
+        <ul class="pagination justify-content-center mb-0">
+          <li class="page-item {{ 'disabled' if not exames.has_prev }}">
+            <a class="page-link" href="?page={{ exames.prev_num }}&status={{ status }}">Anterior</a>
+          </li>
+          {% for p in exames.iter_pages() %}
+            <li class="page-item {{ 'active' if p == exames.page }}">
+              <a class="page-link" href="?page={{ p }}&status={{ status }}">{{ p }}</a>
+            </li>
+          {% endfor %}
+          <li class="page-item {{ 'disabled' if not exames.has_next }}">
+            <a class="page-link" href="?page={{ exames.next_num }}&status={{ status }}">Próxima</a>
+          </li>
+        </ul>
+      </nav>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Modal para resultado -->
+<div class="modal fade" id="resultadoModal" tabindex="-1" aria-labelledby="resultadoModalLabel" aria-modal="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="resultadoModalLabel">Registrar Resultado</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <form method="post" id="formResultado" action="">
+        <div class="modal-body">
+          <p><strong>Exame:</strong> <span id="modalTipoExame"></span></p>
+          <p><strong>Paciente:</strong> <span id="modalNomePaciente"></span></p>
+          <div class="mb-3">
+            <label class="form-label" for="resultadoTexto">Resultado</label>
+            <textarea class="form-control" id="resultadoTexto" name="resultado" rows="4" required
+              placeholder="Descreva o resultado do exame..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+          <button type="submit" class="btn btn-success">Salvar Resultado</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+document.getElementById('resultadoModal').addEventListener('show.bs.modal', function (event) {
+  const btn = event.relatedTarget;
+  const exameId = btn.getAttribute('data-exame-id');
+  const tipo = btn.getAttribute('data-exame-tipo');
+  const paciente = btn.getAttribute('data-exame-paciente');
+
+  document.getElementById('modalTipoExame').textContent = tipo;
+  document.getElementById('modalNomePaciente').textContent = paciente;
+  document.getElementById('formResultado').action = '/exames/' + exameId + '/resultado';
+  document.getElementById('resultadoTexto').value = '';
+});
+</script>
+{% endblock %}

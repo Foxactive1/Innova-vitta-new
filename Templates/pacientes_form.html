@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+  <div class="row justify-content-center">
+    <div class="col-md-8">
+      <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white">
+          <h4 class="mb-0">
+            <i class="bi bi-{{ 'pencil' if editar else 'person-plus' }} me-2"></i>
+            {{ 'Editar Paciente' if editar else 'Cadastrar Novo Paciente' }}
+          </h4>
+        </div>
+        <div class="card-body">
+          <form method="post" action="{{ ('/pacientes/' + paciente.id|string + '/editar') if editar else '/pacientes/novo' }}">
+            <div class="row g-3">
+              <div class="col-md-12">
+                <label class="form-label">Nome Completo *</label>
+                <input class="form-control" name="nome" required value="{{ paciente.nome if editar else '' }}">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Data de Nascimento</label>
+                <input type="date" class="form-control" name="data_nascimento"
+                       value="{{ paciente.data_nascimento.strftime('%Y-%m-%d') if editar and paciente.data_nascimento else '' }}">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Sexo</label>
+                <select class="form-select" name="sexo">
+                  <option value="">Selecione</option>
+                  <option value="M" {{ 'selected' if editar and paciente.sexo == 'M' else '' }}>Masculino</option>
+                  <option value="F" {{ 'selected' if editar and paciente.sexo == 'F' else '' }}>Feminino</option>
+                  <option value="O" {{ 'selected' if editar and paciente.sexo == 'O' else '' }}>Outro</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Telefone</label>
+                <input class="form-control" name="telefone" placeholder="(11) 99999-9999" value="{{ paciente.telefone if editar else '' }}">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">CPF</label>
+                <input class="form-control" name="cpf" placeholder="000.000.000-00" value="{{ paciente.cpf if editar else '' }}">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">RG</label>
+                <input class="form-control" name="rg" value="{{ paciente.rg if editar else '' }}">
+              </div>
+              <div class="col-md-12">
+                <label class="form-label">Endereço</label>
+                <textarea class="form-control" name="endereco" rows="2">{{ paciente.endereco if editar else '' }}</textarea>
+              </div>
+              <div class="col-md-12">
+                <label class="form-label">Doenças Prévias (separe por vírgula)</label>
+                <input class="form-control" name="doencas" placeholder="Diabetes, Hipertensão, Asma..."
+                       value="{{ ', '.join(paciente.doencas_previas|load_json) if editar and paciente.doencas_previas else '' }}">
+              </div>
+            </div>
+            <div class="d-flex justify-content-between mt-4">
+              <a href="/pacientes/" class="btn btn-outline-secondary">Voltar</a>
+              <button type="submit" class="btn btn-primary">
+                <i class="bi bi-check-lg me-1"></i>{{ 'Salvar Alterações' if editar else 'Cadastrar Paciente' }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

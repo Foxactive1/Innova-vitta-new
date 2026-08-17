@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+  <div class="row justify-content-center">
+    <div class="col-md-6">
+      <div class="card shadow-sm">
+        <div class="card-header bg-success text-white">
+          <h4 class="mb-0"><i class="bi bi-person-badge me-2"></i>Cadastrar Novo Médico</h4>
+        </div>
+        <div class="card-body">
+          <form method="post" action="/medicos/novo">
+            <div class="mb-3">
+              <label class="form-label">Nome Completo *</label>
+              <input class="form-control" name="nome" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Especialidade</label>
+              <input class="form-control" name="especialidade" placeholder="Ex: Cardiologia">
+            </div>
+            <div class="mb-3">
+              <label class="form-label">CRM *</label>
+              <input class="form-control" name="crm" placeholder="Ex: 123456-SP" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Telefone</label>
+              <input class="form-control" name="telefone" placeholder="(11) 99999-9999">
+            </div>
+            <div class="mb-3">
+              <label class="form-label">E-mail</label>
+              <input type="email" class="form-control" name="email" placeholder="medico@clinica.com">
+            </div>
+            <div class="d-flex justify-content-between">
+              <a href="/medicos/" class="btn btn-outline-secondary">Voltar</a>
+              <button type="submit" class="btn btn-success">
+                <i class="bi bi-check-lg me-1"></i>Cadastrar
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
