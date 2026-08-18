@@ -1,7 +1,6 @@
-Flask==2.3.3
-Flask-SQLAlchemy==3.1.1
-python-dotenv==1.0.0
-Werkzeug==2.3.8
-SQLAlchemy==2.0.23
-psycopg2-binary==2.9.9
-gunicorn==21.2.0
+Python 3.13
+Flask 3.1.1
+Flask-SQLAlchemy 3.1.1
+SQLAlchemy 2.0.41
+PostgreSQL
+Gunicorn 23.0.0
