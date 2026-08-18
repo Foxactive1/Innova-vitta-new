@@ -1,5 +1,10 @@
+"""
+InNova Vitta+ — Application Factory
+Clínica Vida+ | InNovaIdeia Assessoria em Tecnologia
+"""
+
 from flask import Flask, render_template, request, jsonify
-from datetime import datetime, date, timezone
+from datetime import datetime, date, timedelta, timezone
 from core.models import db, Paciente, Medico, Atendimento, Consulta, Exame, Pagamento, Receita
 from routes.pacientes import pacientes_bp
 from routes.medicos import medicos_bp
@@ -9,33 +14,32 @@ from routes.exames import exames_bp
 from routes.relatorios import relatorios_bp
 from routes.receitas import receitas_bp
 from routes.servicos import servicos_bp
-from datetime import datetime, date, timedelta, timezone
 import os
 import json
 from dotenv import load_dotenv
-load_dotenv('.env')
+
+load_dotenv()
 
 app = Flask(__name__)
 app.config.from_object('config.Config')
 
-# Garante URI do banco
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(
-    os.path.abspath(os.path.dirname(__file__)), 'instance', 'clinica_vida_plus.db'
-)
+# ── Garante pasta instance apenas em ambiente local (SQLite) ───────────────
+if not os.environ.get('VERCEL'):
+    INSTANCE_DIR = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'instance')
+    os.makedirs(INSTANCE_DIR, exist_ok=True)
 
-os.makedirs(os.path.join(os.path.abspath(os.path.dirname(__file__)), 'instance'), exist_ok=True)
-
+# ── Inicialização do banco ─────────────────────────────────────────────────
 db.init_app(app)
 
-# Filtro Jinja2
+# ── Filtro Jinja2 ──────────────────────────────────────────────────────────
 @app.template_filter('load_json')
 def load_json_filter(value):
     try:
         return json.loads(value) if value else []
-    except:
+    except Exception:
         return []
 
-# Registro de blueprints
+# ── Registro de blueprints ─────────────────────────────────────────────────
 app.register_blueprint(pacientes_bp)
 app.register_blueprint(medicos_bp)
 app.register_blueprint(atendimentos_bp)
@@ -45,6 +49,8 @@ app.register_blueprint(relatorios_bp)
 app.register_blueprint(receitas_bp)
 app.register_blueprint(servicos_bp)
 
+
+# ── Rotas principais ───────────────────────────────────────────────────────
 @app.route('/')
 def index():
     hoje = date.today()
@@ -91,10 +97,12 @@ def index():
                            proximas_consultas=proximas_consultas,
                            now=now_utc)
 
+
 @app.route('/api/estatisticas')
 def api_estatisticas():
     from core.utils import estatisticas_gerais
     return jsonify(estatisticas_gerais())
+
 
 @app.route('/api/busca-paciente')
 def api_busca_paciente():
@@ -104,14 +112,9 @@ def api_busca_paciente():
     pacientes = Paciente.query.filter(Paciente.nome.ilike(f'%{q}%')).limit(10).all()
     return jsonify([p.to_dict() for p in pacientes])
 
-@app.cli.command("populate-medicamentos")
-def populate_command():
-    from populate_medicamentos import popular_do_csv_oficial
-    popular_do_csv_oficial()
 
 @app.route('/api/horarios-disponiveis')
 def api_horarios_disponiveis():
-    """Retorna horários disponíveis para um médico em uma data"""
     medico_id = request.args.get('medico_id', type=int)
     data_str = request.args.get('data')
 
@@ -124,9 +127,8 @@ def api_horarios_disponiveis():
         return jsonify({'error': 'Data inválida'}), 400
 
     medico = Medico.query.get_or_404(medico_id)
-    ocupados = medico.horarios_ocupados(data)  # lista de tuplas (inicio, fim)
+    ocupados = medico.horarios_ocupados(data)
 
-    # Horários padrão (8h às 18h, de hora em hora)
     todos_horarios = [f"{h:02d}:00" for h in range(8, 19)]
     disponiveis = []
 
@@ -134,16 +136,11 @@ def api_horarios_disponiveis():
         inicio_h = datetime.strptime(h, '%H:%M').time()
         fim_h = (datetime.combine(date.today(), inicio_h) + timedelta(hours=1)).time()
 
-        # Verifica se há sobreposição com algum horário ocupado
-        conflito = False
-        for ocup_inicio, ocup_fim in ocupados:
-            # Converte strings para time
-            ocup_inicio_t = datetime.strptime(ocup_inicio, '%H:%M').time()
-            ocup_fim_t = datetime.strptime(ocup_fim, '%H:%M').time()
-            # Verifica sobreposição: (inicio_h < ocup_fim_t and fim_h > ocup_inicio_t)
-            if inicio_h < ocup_fim_t and fim_h > ocup_inicio_t:
-                conflito = True
-                break
+        conflito = any(
+            inicio_h < datetime.strptime(ocup_fim, '%H:%M').time() and
+            fim_h > datetime.strptime(ocup_inicio, '%H:%M').time()
+            for ocup_inicio, ocup_fim in ocupados
+        )
 
         if not conflito:
             disponiveis.append(h)
@@ -152,8 +149,17 @@ def api_horarios_disponiveis():
         'medico': medico.nome,
         'data': data_str,
         'disponiveis': disponiveis,
-        'ocupados': ocupados  # opcional, para depuração
+        'ocupados': ocupados
     })
+
+
+@app.cli.command("populate-medicamentos")
+def populate_command():
+    from populate_medicamentos import popular_do_csv_oficial
+    popular_do_csv_oficial()
+
+
+# ── Desenvolvimento local ──────────────────────────────────────────────────
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
