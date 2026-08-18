@@ -1,7 +1,13 @@
-# Arquivo de entrada para servidores WSGI (Gunicorn, uWSGI, etc.)
-# Uso: gunicorn wsgi:app
+"""
+InNova Vitta+ — Ponto de entrada WSGI
+Usado pelo Gunicorn em produção: gunicorn wsgi:app
+"""
 
-from app import app
+from app import app, db
 
-if __name__ == "__main__":
+# Garante que as tabelas existam no primeiro boot em produção
+with app.app_context():
+    db.create_all()
+
+if __name__ == '__main__':
     app.run()
