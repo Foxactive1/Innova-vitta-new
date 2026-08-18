@@ -1,0 +1,213 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="container mt-4">
+
+    <div class="row justify-content-center">
+
+        <div class="col-lg-7">
+
+            <div class="card shadow-sm">
+
+                <div class="card-header bg-success text-white">
+
+                    <h4 class="mb-0">
+
+                        <i class="bi bi-cash-coin me-2"></i>
+
+                        {{ titulo }}
+
+                    </h4>
+
+                </div>
+
+
+                <div class="card-body">
+
+                    <form method="post">
+
+                        <!-- Nome -->
+
+                        <div class="mb-3">
+
+                            <label class="form-label">
+                                Nome do serviço *
+                            </label>
+
+                            <input
+                                type="text"
+                                name="nome"
+                                class="form-control"
+                                required
+                                maxlength="150"
+                                placeholder="Ex.: Consulta médica"
+                                value="{{ servico.nome if servico else '' }}"
+                            >
+
+                        </div>
+
+
+                        <!-- Categoria -->
+
+                        <div class="mb-3">
+
+                            <label class="form-label">
+                                Categoria *
+                            </label>
+
+                            <select
+                                name="categoria"
+                                class="form-select"
+                                required
+                            >
+
+                                <option value="">
+                                    Selecione uma categoria
+                                </option>
+
+                                {% set categoria_atual =
+                                    servico.categoria
+                                    if servico else ''
+                                %}
+
+                                <option
+                                    value="Consulta"
+                                    {% if categoria_atual == 'Consulta' %}selected{% endif %}
+                                >
+                                    Consulta
+                                </option>
+
+                                <option
+                                    value="Exame"
+                                    {% if categoria_atual == 'Exame' %}selected{% endif %}
+                                >
+                                    Exame
+                                </option>
+
+                                <option
+                                    value="Procedimento"
+                                    {% if categoria_atual == 'Procedimento' %}selected{% endif %}
+                                >
+                                    Procedimento
+                                </option>
+
+                                <option
+                                    value="Retorno"
+                                    {% if categoria_atual == 'Retorno' %}selected{% endif %}
+                                >
+                                    Retorno
+                                </option>
+
+                                <option
+                                    value="Emergência"
+                                    {% if categoria_atual == 'Emergência' %}selected{% endif %}
+                                >
+                                    Emergência
+                                </option>
+
+                                <option
+                                    value="Outros"
+                                    {% if categoria_atual == 'Outros' %}selected{% endif %}
+                                >
+                                    Outros
+                                </option>
+
+                            </select>
+
+                        </div>
+
+
+                        <!-- Descrição -->
+
+                        <div class="mb-3">
+
+                            <label class="form-label">
+                                Descrição
+                            </label>
+
+                            <textarea
+                                name="descricao"
+                                class="form-control"
+                                rows="3"
+                                placeholder="Descrição ou observações do serviço..."
+                            >{{ servico.descricao if servico else '' }}</textarea>
+
+                        </div>
+
+
+                        <!-- Valor -->
+
+                        <div class="mb-4">
+
+                            <label class="form-label">
+                                Valor *
+                            </label>
+
+                            <div class="input-group">
+
+                                <span class="input-group-text">
+                                    R$
+                                </span>
+
+                                <input
+                                    type="text"
+                                    name="valor"
+                                    id="valor"
+                                    class="form-control"
+                                    required
+                                    inputmode="decimal"
+                                    placeholder="0,00"
+                                    value="{% if servico %}{{ '%.2f'|format(servico.valor|float)|replace('.', ',') }}{% else %}0,00{% endif %}"
+                                >
+
+                            </div>
+
+                            <div class="form-text">
+                                Informe o valor cobrado pelo serviço.
+                            </div>
+
+                        </div>
+
+
+                        <!-- Botões -->
+
+                        <div class="d-flex justify-content-between">
+
+                            <a
+                                href="{{ url_for('servicos.listar_servicos') }}"
+                                class="btn btn-outline-secondary"
+                            >
+
+                                <i class="bi bi-arrow-left me-1"></i>
+                                Voltar
+
+                            </a>
+
+
+                            <button
+                                type="submit"
+                                class="btn btn-success"
+                            >
+
+                                <i class="bi bi-check-lg me-1"></i>
+
+                                Salvar Serviço
+
+                            </button>
+
+                        </div>
+
+                    </form>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

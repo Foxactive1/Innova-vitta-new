@@ -1,0 +1,142 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+  <div class="row justify-content-center">
+    <div class="col-md-8">
+      <div class="card shadow-sm">
+        <div class="card-header text-white" style="background-color: #6f42c1;">
+          <h4 class="mb-0"><i class="bi bi-file-earmark-plus me-2"></i>Emitir Nova Receita</h4>
+        </div>
+        <div class="card-body">
+          <form method="post" action="/receitas/nova" id="receitaForm">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label">Paciente *</label>
+                <select class="form-select" name="paciente_id" required>
+                  <option value="">Selecione</option>
+                  {% for p in pacientes %}
+                  <option value="{{ p.id }}">{{ p.nome }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Médico *</label>
+                <select class="form-select" name="medico_id" required>
+                  <option value="">Selecione</option>
+                  {% for m in medicos %}
+                  <option value="{{ m.id }}">{{ m.nome }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="col-md-12">
+                <label class="form-label">Atendimento Relacionado</label>
+                <select class="form-select" name="atendimento_id">
+                  <option value="">—</option>
+                  {% for a in atendimentos %}
+                  <option value="{{ a.id }}">{{ a.paciente.nome }} — {{ a.data.strftime('%d/%m/%Y') }} ({{ a.diagnostico[:30] if a.diagnostico else 'Sem diagnóstico' }}...)</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+
+            <hr class="my-4">
+            <h5><i class="bi bi-capsule me-2"></i>Medicamentos</h5>
+
+            <!-- Container dos medicamentos -->
+            <div id="medicamentosContainer">
+              <div class="row g-2 medicamento-row mb-2">
+                <div class="col-md-5">
+                  <input class="form-control" name="med_nome[]" placeholder="Nome do medicamento" 
+                         list="medicamentosList" autocomplete="off" required>
+                </div>
+                <div class="col-md-3">
+                  <input class="form-control" name="med_dosagem[]" placeholder="Dosagem (ex: 500mg)">
+                </div>
+                <div class="col-md-3">
+                  <input class="form-control" name="med_frequencia[]" placeholder="Frequência (ex: 8/8h)">
+                </div>
+                <div class="col-md-1">
+                  <button type="button" class="btn btn-outline-danger w-100" onclick="removerMedicamento(this)">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Datalist compartilhado -->
+            <datalist id="medicamentosList"></datalist>
+
+            <button type="button" class="btn btn-outline-primary btn-sm mb-4" onclick="adicionarMedicamento()">
+              <i class="bi bi-plus-lg me-1"></i>Adicionar Medicamento
+            </button>
+
+            <div class="mb-3">
+              <label class="form-label">Observações</label>
+              <textarea class="form-control" name="observacoes" rows="3" placeholder="Instruções adicionais..."></textarea>
+            </div>
+
+            <div class="d-flex justify-content-between">
+              <a href="/receitas/" class="btn btn-outline-secondary">Voltar</a>
+              <button type="submit" class="btn btn-purple text-white" style="background-color: #6f42c1;">
+                <i class="bi bi-check-lg me-1"></i>Emitir Receita
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function adicionarMedicamento() {
+  const container = document.getElementById('medicamentosContainer');
+  const row = document.createElement('div');
+  row.className = 'row g-2 medicamento-row mb-2';
+  row.innerHTML = `
+    <div class="col-md-5"><input class="form-control" name="med_nome[]" placeholder="Nome do medicamento" list="medicamentosList" autocomplete="off" required></div>
+    <div class="col-md-3"><input class="form-control" name="med_dosagem[]" placeholder="Dosagem"></div>
+    <div class="col-md-3"><input class="form-control" name="med_frequencia[]" placeholder="Frequência"></div>
+    <div class="col-md-1"><button type="button" class="btn btn-outline-danger w-100" onclick="removerMedicamento(this)"><i class="bi bi-trash"></i></button></div>
+  `;
+  container.appendChild(row);
+}
+
+function removerMedicamento(btn) {
+  const rows = document.querySelectorAll('.medicamento-row');
+  if (rows.length > 1) {
+    btn.closest('.medicamento-row').remove();
+  }
+}
+
+// === AutoComplete via API ===
+document.addEventListener('input', function (e) {
+  const input = e.target;
+  // Verifica se o campo é um dos inputs de medicamento
+  if (input && input.matches('input[name="med_nome[]"]')) {
+    const termo = input.value.trim();
+    const datalist = document.getElementById('medicamentosList');
+    
+    if (termo.length < 2) {
+      datalist.innerHTML = '';
+      return;
+    }
+
+    // Busca na API
+    fetch(`/receitas/api/medicamentos?q=${encodeURIComponent(termo)}`)
+      .then(response => response.json())
+      .then(data => {
+        datalist.innerHTML = '';
+        data.forEach(item => {
+          const option = document.createElement('option');
+          option.value = item.nome;
+          // Opcional: guardar o id para uso futuro
+          option.dataset.id = item.id;
+          datalist.appendChild(option);
+        });
+      })
+      .catch(error => console.error('Erro ao buscar medicamentos:', error));
+  }
+});
+</script>
+{% endblock %}

@@ -1,1 +1,352 @@
+<!doctype html>
+<html lang="pt-BR">
 
+<head>
+
+  <meta charset="utf-8">
+
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>
+    {% block title %}InNova Vitta+{% endblock %}
+  </title>
+
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+  >
+
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css"
+    rel="stylesheet"
+  >
+
+  <link
+    href="{{ url_for('static', filename='css/custom.css') }}"
+    rel="stylesheet"
+  >
+
+  {% block extra_css %}{% endblock %}
+
+</head>
+
+
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow">
+
+  <div class="container-fluid">
+
+    <!-- Marca -->
+
+    <a
+      class="navbar-brand fw-bold"
+      href="{{ url_for('index') }}"
+    >
+
+      <i class="bi bi-heart-pulse-fill me-2"></i>
+
+      InNova Vitta+
+
+    </a>
+
+
+    <!-- Menu mobile -->
+
+    <button
+      class="navbar-toggler"
+      type="button"
+      data-bs-toggle="collapse"
+      data-bs-target="#navbarNav"
+      aria-controls="navbarNav"
+      aria-expanded="false"
+      aria-label="Alternar navegação"
+    >
+
+      <span class="navbar-toggler-icon"></span>
+
+    </button>
+
+
+    <!-- Navegação -->
+
+    <div
+      class="collapse navbar-collapse"
+      id="navbarNav"
+    >
+
+      <ul class="navbar-nav ms-auto">
+
+
+        <!-- Dashboard -->
+
+        <li class="nav-item">
+
+          <a
+            class="nav-link"
+            href="{{ url_for('index') }}"
+          >
+
+            <i class="bi bi-speedometer2 me-1"></i>
+
+            Dashboard
+
+          </a>
+
+        </li>
+
+
+        <!-- Pacientes -->
+
+        <li class="nav-item">
+
+          <a
+            class="nav-link"
+            href="{{ url_for('pacientes.listar_pacientes') }}"
+          >
+
+            <i class="bi bi-people me-1"></i>
+
+            Pacientes
+
+          </a>
+
+        </li>
+
+
+        <!-- Médicos -->
+
+        <li class="nav-item">
+
+          <a
+            class="nav-link"
+            href="{{ url_for('medicos.listar_medicos') }}"
+          >
+
+            <i class="bi bi-person-badge me-1"></i>
+
+            Médicos
+
+          </a>
+
+        </li>
+
+
+        <!-- Consultas -->
+
+        <li class="nav-item">
+
+          <a
+            class="nav-link"
+            href="{{ url_for('consultas.listar_consultas') }}"
+          >
+
+            <i class="bi bi-calendar-check me-1"></i>
+
+            Consultas
+
+          </a>
+
+        </li>
+
+
+        <!-- Serviços -->
+
+        <li class="nav-item">
+
+          <a
+            class="nav-link"
+            href="{{ url_for('servicos.listar_servicos') }}"
+          >
+
+            <i class="bi bi-cash-coin me-1"></i>
+
+            Serviços
+
+          </a>
+
+        </li>
+
+
+        <!-- Exames -->
+
+        <li class="nav-item">
+
+          <a
+            class="nav-link"
+            href="{{ url_for('exames.listar_exames') }}"
+          >
+
+            <i class="bi bi-clipboard2-pulse me-1"></i>
+
+            Exames
+
+          </a>
+
+        </li>
+
+
+        <!-- Atendimentos -->
+
+        <li class="nav-item">
+
+          <a
+            class="nav-link"
+            href="{{ url_for('atendimentos.listar_atendimentos') }}"
+          >
+
+            <i class="bi bi-activity me-1"></i>
+
+            Atendimentos
+
+          </a>
+
+        </li>
+
+
+        <!-- Receitas -->
+
+        <li class="nav-item">
+
+          <a
+            class="nav-link"
+            href="{{ url_for('receitas.listar_receitas') }}"
+          >
+
+            <i class="bi bi-file-medical me-1"></i>
+
+            Receitas
+
+          </a>
+
+        </li>
+
+
+        <!-- Relatórios -->
+
+        <li class="nav-item">
+
+          <a
+            class="nav-link"
+            href="{{ url_for('relatorios.dashboard_relatorios') }}"
+          >
+
+            <i class="bi bi-graph-up me-1"></i>
+
+            Relatórios
+
+          </a>
+
+        </li>
+
+      </ul>
+
+    </div>
+
+  </div>
+
+</nav>
+
+
+<!-- Conteúdo -->
+
+<main class="py-4">
+
+  <!-- Mensagens -->
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+
+    {% if messages %}
+
+      <div class="container mt-3">
+
+        {% for category, msg in messages %}
+
+          <div
+            class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show"
+            role="alert"
+          >
+
+            {{ msg }}
+
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="alert"
+              aria-label="Fechar"
+            ></button>
+
+          </div>
+
+        {% endfor %}
+
+      </div>
+
+    {% endif %}
+
+  {% endwith %}
+
+
+  {% block content %}{% endblock %}
+
+</main>
+
+
+<!-- Rodapé -->
+
+<footer class="bg-light text-center py-4 mt-5 border-top">
+
+  <div class="container">
+
+    <p class="mb-1 text-muted">
+
+      Desenvolvido por Dione Castro Alves
+
+      |
+
+      &copy;
+
+      {{ now.year if now else 2026 }}
+
+      InNovaIdeia
+
+    </p>
+
+
+    <p class="mb-0">
+
+      <a
+        href="https://innovaideia-github-io.vercel.app"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="text-decoration-none"
+      >
+
+        Visite meu portfólio
+
+      </a>
+
+    </p>
+
+  </div>
+
+</footer>
+
+
+<!-- Bootstrap -->
+
+<script
+  src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
+></script>
+
+
+<!-- JavaScript da aplicação -->
+
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+
+
+{% block extra_js %}{% endblock %}
+
+</body>
+
+</html>
