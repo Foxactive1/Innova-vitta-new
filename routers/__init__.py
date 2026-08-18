@@ -1,2 +1,0 @@
-
-# Pacote core - Clínica Vida+
