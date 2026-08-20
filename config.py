@@ -24,7 +24,13 @@ class Config:
         "chave-secreta-clinica-vida-plus-2025-innova"
     )
 
-    DATABASE_URL = os.environ.get("DATABASE_URL")
+    # --- TRATAMENTO DA URL (corrigido) ---
+    raw_url = os.environ.get("DATABASE_URL")
+    if raw_url:
+        # Remove espaços, quebras de linha e aspas extras
+        DATABASE_URL = raw_url.strip().strip('"').strip("'")
+    else:
+        DATABASE_URL = None
 
     # ========================================================
     # BANCO DE DADOS
