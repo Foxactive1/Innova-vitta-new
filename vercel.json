@@ -3,7 +3,7 @@
   "name": "innova-vitta-plus",
   "builds": [
     {
-      "src": "api/index.py",
+      "src": "app.py",
       "use": "@vercel/python",
       "config": {
         "maxLambdaSize": "50mb"
@@ -21,7 +21,7 @@
     },
     {
       "src": "/(.*)",
-      "dest": "api/index.py"
+      "dest": "app.py"
     }
   ],
   "env": {
