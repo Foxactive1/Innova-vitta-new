@@ -1,54 +1,72 @@
-"""
-InNova Vitta+ — Configuração da aplicação
-Suporta SQLite (dev/Termux) e PostgreSQL (Vercel + Supabase/Neon)
-"""
-
 import os
+from pathlib import Path
+from dotenv import load_dotenv
 
-BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+BASE_DIR = Path(__file__).resolve().parent
 
-# Detecta se está rodando no Vercel
-ON_VERCEL = bool(os.environ.get('VERCEL'))
+# ============================================================
+# CARREGAR VARIÁVEIS DO NEON
+# ============================================================
 
+ENV_FILE = BASE_DIR / ".env1"
+
+if ENV_FILE.exists():
+    load_dotenv(ENV_FILE)
+
+# ============================================================
+# CONFIGURAÇÃO
+# ============================================================
 
 class Config:
-    # ── Segurança ──────────────────────────────────────────────────────────
-    SECRET_KEY = os.environ.get('SECRET_KEY')
-    if not SECRET_KEY:
-        raise ValueError(
-            "SECRET_KEY não definida. "
-            "Configure a variável de ambiente no painel do Vercel."
-        )
 
-    # ── Banco de dados ─────────────────────────────────────────────────────
-    # No Vercel, DATABASE_URL é obrigatória (PostgreSQL via Supabase ou Neon)
-    # Localmente, cai para SQLite
-    _db_url = os.environ.get(
-        'DATABASE_URL',
-        'sqlite:///' + os.path.join(BASE_DIR, 'instance', 'clinica_vida_plus.db')
+    SECRET_KEY = os.environ.get(
+        "SECRET_KEY",
+        "chave-secreta-clinica-vida-plus-2025-innova"
     )
 
-    # Railway/Supabase/Neon às vezes usam prefixo legado 'postgres://'
-    if _db_url.startswith('postgres://'):
-        _db_url = _db_url.replace('postgres://', 'postgresql://', 1)
+    DATABASE_URL = os.environ.get("DATABASE_URL")
 
-    SQLALCHEMY_DATABASE_URI = _db_url
+    # ========================================================
+    # BANCO DE DADOS
+    # ========================================================
+
+    if DATABASE_URL:
+        SQLALCHEMY_DATABASE_URI = DATABASE_URL
+    else:
+        # Fallback somente para desenvolvimento local
+        SQLALCHEMY_DATABASE_URI = (
+            f"sqlite:///{BASE_DIR / 'instance' / 'clinica_vida_plus.db'}"
+        )
+
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
-    # ── Pool de conexões ───────────────────────────────────────────────────
-    _is_sqlite = _db_url.startswith('sqlite')
+    # ========================================================
+    # DEBUG
+    # ========================================================
 
-    SQLALCHEMY_ENGINE_OPTIONS = {
-        'pool_pre_ping': True,
-        'pool_recycle': 300,
-        **(
-            {'connect_args': {'check_same_thread': False, 'timeout': 30}}
-            if _is_sqlite else
-            # PostgreSQL no ambiente serverless: pool mínimo para evitar
-            # esgotar conexões entre cold starts
-            {'pool_size': 1, 'max_overflow': 0}
-        ),
-    }
+    DEBUG = os.environ.get(
+        "DEBUG",
+        "False"
+    ).lower() in ("true", "1", "t")
 
-    # ── Debug ──────────────────────────────────────────────────────────────
-    DEBUG = os.environ.get('DEBUG', 'False').lower() in ('true', '1', 't')
+    # ========================================================
+    # SQLALCHEMY ENGINE
+    # ========================================================
+
+    if SQLALCHEMY_DATABASE_URI.startswith("sqlite"):
+
+        SQLALCHEMY_ENGINE_OPTIONS = {
+            "connect_args": {
+                "check_same_thread": False,
+                "timeout": 30,
+            },
+            "pool_pre_ping": True,
+        }
+
+    else:
+
+        # PostgreSQL / Neon
+        SQLALCHEMY_ENGINE_OPTIONS = {
+            "pool_pre_ping": True,
+            "pool_recycle": 300,
+        }
