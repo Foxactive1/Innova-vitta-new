@@ -1,0 +1,18 @@
+# ============================================================
+# InNova Vitta+ — Configuração de Ambiente
+# ============================================================
+
+# Chave secreta da aplicação
+# Gere uma nova e forte para produção.
+SECRET_KEY=5e798cd00cc5a777ac0d31434431064363cf4b373f7e63a52d3b992b84724540
+
+# ============================================================
+# Banco de dados — Neon PostgreSQL
+# ============================================================
+
+DATABASE_URL='postgresql://neondb_owner:npg_yKc0uhLfnV5B@ep-plain-bonus-awm0ez5t-pooler.c-12.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require'
+# ============================================================
+# Flask
+# ============================================================
+
+DEBUG=False
