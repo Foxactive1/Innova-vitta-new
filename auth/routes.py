@@ -35,7 +35,7 @@ def _configured_user():
 @login_manager.user_loader
 def load_user(user_id):
     user = _configured_user()
-    if user and hmac.compare_digest(str(user.id), str(user_id)):
+    if user and hmac.compare_digest(str(user.get_id()), str(user_id)):
         return user
     return None
 
