@@ -5,7 +5,7 @@
 
   <meta charset="utf-8">
 
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1">\n\n  <meta name="csrf-token" content="{{ csrf_token() }}">
 
   <title>
     {% block title %}InNova Vitta+{% endblock %}
@@ -75,7 +75,7 @@
       id="navbarNav"
     >
 
-      <ul class="navbar-nav ms-auto">
+      <ul class="navbar-nav ms-auto">\n\n        {% if current_user.is_authenticated %}
 
 
         <!-- Dashboard -->
@@ -239,6 +239,26 @@
 
         </li>
 
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+            <i class="bi bi-person-circle me-1"></i>{{ current_user.username }}
+          </a>
+          <ul class="dropdown-menu dropdown-menu-end">
+            <li><span class="dropdown-item-text small text-muted">Perfil: {{ current_user.role }}</span></li>
+            <li><hr class="dropdown-divider"></li>
+            <li>
+              <form method="post" action="{{ url_for('auth.logout') }}" class="px-2">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="dropdown-item text-danger" type="submit">
+                  <i class="bi bi-box-arrow-right me-1"></i>Sair
+                </button>
+              </form>
+            </li>
+          </ul>
+        </li>
+
+        {% endif %}
+
       </ul>
 
     </div>
@@ -344,6 +364,24 @@
 
 <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 
+
+<script>
+  // Compatibilidade CSRF para formulários POST legados.
+  // Novos formulários devem declarar o campo hidden explicitamente.
+  document.addEventListener("DOMContentLoaded", () => {
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    if (!meta) return;
+
+    document.querySelectorAll('form[method="post"], form[method="POST"]').forEach((form) => {
+      if (form.querySelector('input[name="csrf_token"]')) return;
+      const input = document.createElement("input");
+      input.type = "hidden";
+      input.name = "csrf_token";
+      input.value = meta.content;
+      form.prepend(input);
+    });
+  });
+</script>
 
 {% block extra_js %}{% endblock %}
 
