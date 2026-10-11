@@ -4,7 +4,9 @@ Clínica Vida+ | InNovaIdeia Assessoria em Tecnologia
 """
 
 import json
+import logging
 import os
+import sys
 from datetime import date, datetime, timedelta, timezone
 
 from flask import Flask, jsonify, redirect, render_template, request, url_for
@@ -23,6 +25,48 @@ from routes.relatorios import relatorios_bp
 from routes.servicos import servicos_bp
 
 
+# ============================================================
+# LOGGING
+# ============================================================
+
+def setup_logging(app):
+    """
+    Configura logging estruturado para a aplicação.
+
+    Em produção, escreve em arquivo (se LOG_FILE configurado).
+    Em desenvolvimento, escreve no stdout.
+    """
+    level_name = app.config.get("LOG_LEVEL", "INFO")
+    level = getattr(logging, level_name.upper(), logging.INFO)
+
+    formatter = logging.Formatter(
+        "%(asctime)s %(levelname)s [%(name)s] %(message)s"
+    )
+
+    root_logger = logging.getLogger()
+    root_logger.setLevel(level)
+
+    # Evita handlers duplicados ao reiniciar
+    if root_logger.handlers:
+        return
+
+    # Handler para stdout (sempre ativo)
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setLevel(level)
+    console_handler.setFormatter(formatter)
+    root_logger.addHandler(console_handler)
+
+    # Handler para arquivo (opcional, configurado via LOG_FILE)
+    log_file = app.config.get("LOG_FILE", "")
+    if log_file:
+        file_handler = logging.FileHandler(log_file)
+        file_handler.setLevel(level)
+        file_handler.setFormatter(formatter)
+        root_logger.addHandler(file_handler)
+
+    app.logger.info("Logging configurado (level=%s)", level_name)
+
+
 def create_app(config_object="config.Config"):
     app = Flask(__name__)
     app.config.from_object(config_object)
@@ -33,6 +77,11 @@ def create_app(config_object="config.Config"):
         )
 
     os.makedirs(app.instance_path, exist_ok=True)
+
+    # ------------------------------------------------------------
+    # Logging
+    # ------------------------------------------------------------
+    setup_logging(app)
 
     db.init_app(app)
     login_manager.init_app(app)
@@ -107,13 +156,22 @@ def create_app(config_object="config.Config"):
     def inject_template_context():
         return {"now": datetime.now(timezone.utc)}
 
+    # ------------------------------------------------------------
+    # Dashboard
+    # ------------------------------------------------------------
+    # Usa clinic_day_bounds() para filtrar "hoje" no timezone
+    # da clínica (não no timezone do servidor).
+    # ------------------------------------------------------------
+
     @app.route("/")
     def index():
-        hoje = date.today()
+        from core.utils import clinic_day_bounds, today_clinic
+
+        hoje = today_clinic()
         now_utc = datetime.now(timezone.utc)
 
-        inicio_hoje = datetime.combine(hoje, datetime.min.time()).replace(tzinfo=timezone.utc)
-        fim_hoje = datetime.combine(hoje, datetime.max.time()).replace(tzinfo=timezone.utc)
+        # Limites do dia no timezone da clínica, convertidos para UTC
+        inicio_hoje, fim_hoje = clinic_day_bounds(hoje)
 
         total_pacientes = Paciente.query.count()
         total_medicos = Medico.query.count()
@@ -133,9 +191,17 @@ def create_app(config_object="config.Config"):
             ).count()
         )
 
-        urgencias = Atendimento.query.filter(Atendimento.tipo.ilike("%urg%")).count()
-        consultas_pendentes = Consulta.query.filter(Consulta.status == "agendada").count()
-        exames_pendentes = Exame.query.filter(Exame.status == "agendado").count()
+        urgencias = Atendimento.query.filter(
+            Atendimento.tipo.ilike("%urg%")
+        ).count()
+
+        consultas_pendentes = Consulta.query.filter(
+            Consulta.status == "agendada"
+        ).count()
+
+        exames_pendentes = Exame.query.filter(
+            Exame.status == "agendado"
+        ).count()
 
         pagamentos_atrasados = (
             Pagamento.query.filter(
@@ -144,7 +210,12 @@ def create_app(config_object="config.Config"):
             ).count()
         )
 
-        ultimos_atendimentos = Atendimento.query.order_by(Atendimento.data.desc()).limit(5).all()
+        ultimos_atendimentos = (
+            Atendimento.query
+            .order_by(Atendimento.data.desc())
+            .limit(5)
+            .all()
+        )
 
         proximas_consultas = (
             Consulta.query.filter(
@@ -169,6 +240,10 @@ def create_app(config_object="config.Config"):
             ultimos_atendimentos=ultimos_atendimentos,
             proximas_consultas=proximas_consultas,
         )
+
+    # ------------------------------------------------------------
+    # APIs
+    # ------------------------------------------------------------
 
     @app.route("/api/estatisticas")
     def api_estatisticas():
@@ -233,10 +308,60 @@ def create_app(config_object="config.Config"):
             }
         )
 
+    # ------------------------------------------------------------
+    # CLI Commands
+    # ------------------------------------------------------------
+
     @app.cli.command("populate-medicamentos")
     def populate_command():
-        from populate_medicamentos_neon import popular_do_csv
-        popular_do_csv()
+        """
+        Popula a tabela de medicamentos a partir de um CSV.
+
+        Uso:
+            flask populate-medicamentos --arquivo dados.csv
+        """
+        import click
+
+        arquivo = click.prompt(
+            "Caminho do arquivo CSV",
+            type=click.Path(exists=True)
+        )
+
+        try:
+            import csv
+
+            from core.models import Medicamento
+
+            count = 0
+            with open(arquivo, encoding="utf-8") as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    medicamento = Medicamento(
+                        nome=row.get("nome", ""),
+                        principio_ativo=row.get("principio_ativo", ""),
+                        dosagem=row.get("dosagem", ""),
+                        forma_farmaceutica=row.get("forma_farmaceutica", ""),
+                        tipo_produto=row.get("tipo_produto", ""),
+                        categoria_regulatoria=row.get("categoria_regulatoria", ""),
+                        numero_registro_produto=row.get("numero_registro_produto", ""),
+                        data_finalizacao_processo=row.get("data_finalizacao_processo", ""),
+                        data_vencimento_registro=row.get("data_vencimento_registro", ""),
+                        numero_processo=row.get("numero_processo", ""),
+                        classe_terapeutica=row.get("classe_terapeutica", ""),
+                        fabricante=row.get("fabricante", ""),
+                        situacao_registro=row.get("situacao_registro", ""),
+                        descricao=row.get("descricao", ""),
+                    )
+                    db.session.add(medicamento)
+                    count += 1
+
+            db.session.commit()
+            click.echo(f"✅ {count} medicamentos importados com sucesso.")
+
+        except Exception as exc:
+            db.session.rollback()
+            click.echo(f"❌ Erro ao importar: {exc}")
+            raise SystemExit(1)
 
     return app
 
@@ -258,4 +383,4 @@ if __name__ == "__main__":
         host="0.0.0.0",
         port=int(os.environ.get("PORT", 5000)),
         debug=app.config.get("DEBUG", False),
-    )
+    
