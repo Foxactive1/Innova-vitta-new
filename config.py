@@ -63,3 +63,17 @@ class Config:
 
     WTF_CSRF_ENABLED = True
     WTF_CSRF_SSL_STRICT = _env_bool("WTF_CSRF_SSL_STRICT", not DEBUG)
+
+    # ------------------------------------------------------------
+    # TIMEZONE DA CLÍNICA
+    # ------------------------------------------------------------
+    # Fuso horário usado para exibição e filtros de "hoje".
+    # Datas são armazenadas em UTC no banco, mas a clínica opera
+    # em horário local (ex: America/Sao_Paulo = UTC-3).
+    CLINIC_TIMEZONE = os.environ.get("CLINIC_TIMEZONE", "America/Sao_Paulo")
+
+    # ------------------------------------------------------------
+    # LOGGING
+    # ------------------------------------------------------------
+    LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")
+    LOG_FILE = os.environ.get("LOG_FILE", "")
