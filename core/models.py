@@ -395,7 +395,7 @@ class Medico(db.Model, TimestampMixin):
         consultas = Consulta.query.filter(
             Consulta.medico_id == self.id,
             Consulta.data_hora >= inicio,
-            Consulta.data_hora <= fim,
+            Consulta.data_hora < fim,
             Consulta.status != "cancelada"
         ).all()
 
