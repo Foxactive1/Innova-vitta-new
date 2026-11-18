@@ -14,6 +14,7 @@ READ_ROLES = {
     "api_estatisticas": {"admin", "medico", "recepcao", "financeiro", "auditor"},
     "api_busca_paciente": {"admin", "medico", "recepcao"},
     "api_horarios_disponiveis": {"admin", "medico", "recepcao"},
+    "admin_auditoria": {"admin", "auditor"},
 }
 
 WRITE_ROLES = {
