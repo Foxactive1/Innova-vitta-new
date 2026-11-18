@@ -405,7 +405,7 @@ def popular_do_csv():
                     # Monta dados
                     # ----------------------------------------
 
-                    dados = {}
+                    dados = {"tenant_id": 1}  # catálogo inicial vinculado à clínica padrão
 
                     for coluna_csv, atributo in mapeamento.items():
 
