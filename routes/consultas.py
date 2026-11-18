@@ -4,6 +4,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from datetime import datetime, date, timezone, timedelta
 from core.models import db, Consulta, Paciente, Medico, Servico
 from core.utils import validar_valor, parse_data_hora
+from core.time_utils import CLINIC_TIMEZONE
 
 consultas_bp = Blueprint('consultas', __name__, url_prefix='/consultas')
 
@@ -134,7 +135,7 @@ def nova_consulta():
         return redirect(url_for('consultas.listar_consultas'))
 
     return render_template('consultas_form.html', pacientes=pacientes, medicos=medicos,
-                           servicos=servicos, hoje=date.today().isoformat())
+                           servicos=servicos, hoje=datetime.now(CLINIC_TIMEZONE).date().isoformat())
 
 @consultas_bp.route('/<int:cid>/confirmar', methods=['POST'])
 def confirmar_consulta(cid):
