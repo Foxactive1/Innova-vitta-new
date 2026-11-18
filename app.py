@@ -7,12 +7,16 @@ import json
 import os
 from datetime import date, datetime, timedelta, timezone
 
-from flask import Flask, jsonify, redirect, render_template, request, url_for
+from flask import Flask, jsonify, redirect, render_template, request, url_for, abort, g
+import click
 from flask_login import current_user
 
 from auth import auth_bp
-from core.models import Atendimento, Consulta, Exame, Medico, Paciente, Pagamento, Receita, db
-from extensions import csrf, login_manager, migrate
+from core.models import Atendimento, AuditLog, ClinicMembership, Consulta, Exame, Medico, Paciente, Pagamento, Receita, Tenant, User, db
+from extensions import csrf, limiter, login_manager, migrate
+from auth.permissions import role_allowed
+from sqlalchemy.exc import IntegrityError
+from core import tenancy as _tenancy
 from routes.atendimentos import atendimentos_bp
 from routes.consultas import consultas_bp
 from routes.exames import exames_bp
@@ -37,6 +41,7 @@ def create_app(config_object="config.Config"):
 
     db.init_app(app)
     migrate.init_app(app, db)
+    limiter.init_app(app)
     login_manager.init_app(app)
     csrf.init_app(app)
 
@@ -56,13 +61,19 @@ def create_app(config_object="config.Config"):
 
     @app.before_request
     def require_authentication():
-        allowed = {"auth.login", "static"}
+        allowed = {"auth.login", "auth.logout", "static"}
         endpoint = request.endpoint
 
         if endpoint is None or endpoint in allowed:
             return None
 
         if current_user.is_authenticated:
+            tenant_id = getattr(current_user, "tenant_id", None)
+            if tenant_id is None:
+                abort(403)
+            g.active_tenant_id = tenant_id
+            if not role_allowed(endpoint, request.method, getattr(current_user, "role", None)):
+                abort(403)
             return None
 
         if request.path.startswith("/api/"):
@@ -96,6 +107,36 @@ def create_app(config_object="config.Config"):
                 "Strict-Transport-Security",
                 "max-age=31536000; includeSubDomains",
             )
+        return response
+
+    @app.after_request
+    def audit_sensitive_access(response):
+        if not current_user.is_authenticated:
+            return response
+        endpoint = request.endpoint or ""
+        resource = "pacientes" if endpoint == "api_busca_paciente" else endpoint.split(".", 1)[0]
+        if resource not in {"pacientes", "atendimentos", "consultas", "exames", "receitas", "relatorios"}:
+            return response
+        tenant_id = getattr(current_user, "tenant_id", None)
+        if tenant_id is None:
+            return response
+        view_args = request.view_args or {}
+        resource_id = next((str(view_args[k]) for k in ("id", "pid", "aid", "cid") if k in view_args), None)
+        action = "read" if request.method in {"GET", "HEAD"} else "write"
+        try:
+            # Independent transaction: audit logging must not commit or roll back
+            # business changes left by the view.
+            with db.engine.begin() as connection:
+                connection.execute(AuditLog.__table__.insert().values(
+                    tenant_id=tenant_id, user_id=current_user.id, action=action,
+                    resource_type=resource, resource_id=resource_id,
+                    endpoint=endpoint[:160], http_method=request.method[:10],
+                    status_code=response.status_code,
+                    ip_address=(request.remote_addr or "")[:45],
+                    user_agent=(request.user_agent.string or "")[:255],
+                ))
+        except Exception:
+            app.logger.exception("Falha ao registrar evento de auditoria")
         return response
 
     @app.template_filter("load_json")
@@ -232,6 +273,57 @@ def create_app(config_object="config.Config"):
                 "ocupados": ocupados,
             }
         )
+
+    @app.route("/admin/auditoria")
+    def admin_auditoria():
+        """Consulta paginada dos eventos de auditoria da clínica ativa."""
+        tenant_id = getattr(current_user, "tenant_id", None)
+        eventos = (
+            AuditLog.query.filter_by(tenant_id=tenant_id)
+            .order_by(AuditLog.created_at.desc(), AuditLog.id.desc())
+            .limit(200)
+            .all()
+        )
+        return jsonify([
+            {
+                "id": item.id,
+                "timestamp": item.created_at.isoformat() if item.created_at else None,
+                "user_id": item.user_id,
+                "action": item.action,
+                "resource_type": item.resource_type,
+                "resource_id": item.resource_id,
+                "endpoint": item.endpoint,
+                "method": item.http_method,
+                "status_code": item.status_code,
+                "ip_address": item.ip_address,
+            }
+            for item in eventos
+        ])
+
+    @app.cli.command("create-user")
+    @click.option("--username", required=True)
+    @click.option("--email", required=True)
+    @click.option("--role", type=click.Choice(["admin", "medico", "recepcao", "financeiro", "auditor"]), required=True)
+    @click.option("--password-hash", required=True, help="Hash Werkzeug; nunca informe senha em texto puro.")
+    def create_user_command(username, email, role, password_hash):
+        """Cria usuário persistente na clínica padrão."""
+        if not password_hash.startswith(("scrypt:", "pbkdf2:")):
+            raise click.ClickException("Informe um hash Werkzeug válido em --password-hash.")
+        try:
+            slug = os.environ.get("DEFAULT_TENANT_SLUG", "clinica-vida-plus")
+            tenant = Tenant.query.filter_by(slug=slug).first()
+            if tenant is None:
+                tenant = Tenant(nome=os.environ.get("DEFAULT_TENANT_NAME", "Clínica Vida+"), slug=slug)
+                db.session.add(tenant)
+                db.session.flush()
+            user = User(username=username, email=email.lower(), password_hash=password_hash, ativo=True)
+            user.memberships.append(ClinicMembership(tenant=tenant, role=role, padrao=True, ativo=True))
+            db.session.add(user)
+            db.session.commit()
+        except IntegrityError as exc:
+            db.session.rollback()
+            raise click.ClickException("Usuário ou e-mail já cadastrado.") from exc
+        click.echo(f"Usuário {username} criado com perfil {role} na clínica {tenant.slug}.")
 
     @app.cli.command("populate-medicamentos")
     def populate_command():

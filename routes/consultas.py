@@ -78,7 +78,7 @@ def nova_consulta():
             flash('Paciente não encontrado.', 'danger')
             return redirect(url_for('consultas.nova_consulta'))
 
-        medico = Medico.query.filter_by(id=medico_id, ativo=True).first()
+        medico = Medico.query.filter_by(id=medico_id, ativo=True).with_for_update().first()
         if not medico:
             flash('Médico inválido ou inativo.', 'danger')
             return redirect(url_for('consultas.nova_consulta'))

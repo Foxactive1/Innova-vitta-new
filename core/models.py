@@ -1,5 +1,6 @@
 from datetime import datetime, timezone, date, time, timedelta
 from flask_sqlalchemy import SQLAlchemy
+from flask_login import UserMixin
 import json
 
 
@@ -80,11 +81,89 @@ class TimestampMixin:
     )
 
 
+
+
+# ============================================================
+# IDENTIDADE, CLÍNICAS E AUDITORIA
+# ============================================================
+
+class Tenant(db.Model, TimestampMixin):
+    __tablename__ = "tenant"
+    id = db.Column(db.Integer, primary_key=True)
+    nome = db.Column(db.String(160), nullable=False)
+    slug = db.Column(db.String(80), nullable=False, unique=True)
+    ativo = db.Column(db.Boolean, nullable=False, default=True)
+
+
+class User(UserMixin, db.Model, TimestampMixin):
+    __tablename__ = "app_user"
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(80), nullable=False, unique=True)
+    email = db.Column(db.String(254), nullable=False, unique=True)
+    password_hash = db.Column(db.String(512), nullable=False)
+    ativo = db.Column(db.Boolean, nullable=False, default=True)
+    memberships = db.relationship("ClinicMembership", back_populates="user", cascade="all, delete-orphan")
+
+    @property
+    def default_membership(self):
+        active = [m for m in self.memberships if m.ativo and m.tenant and m.tenant.ativo]
+        return next((m for m in active if m.padrao), active[0] if active else None)
+
+    @property
+    def tenant_id(self):
+        membership = self.default_membership
+        return membership.tenant_id if membership else None
+
+    @property
+    def role(self):
+        membership = self.default_membership
+        return membership.role if membership else None
+
+    @property
+    def is_active(self):
+        return bool(self.ativo and self.default_membership)
+
+
+class ClinicMembership(db.Model, TimestampMixin):
+    __tablename__ = "clinic_membership"
+    __table_args__ = (db.UniqueConstraint("user_id", "tenant_id", name="uq_membership_user_tenant"),)
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("app_user.id"), nullable=False, index=True)
+    tenant_id = db.Column(db.Integer, db.ForeignKey("tenant.id"), nullable=False, index=True)
+    role = db.Column(db.String(32), nullable=False, default="recepcao")
+    padrao = db.Column(db.Boolean, nullable=False, default=False)
+    ativo = db.Column(db.Boolean, nullable=False, default=True)
+    user = db.relationship("User", back_populates="memberships")
+    tenant = db.relationship("Tenant")
+
+
+class AuditLog(db.Model):
+    __tablename__ = "audit_log"
+    id = db.Column(db.Integer, primary_key=True)
+    tenant_id = db.Column(db.Integer, db.ForeignKey("tenant.id"), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("app_user.id"), nullable=True, index=True)
+    action = db.Column(db.String(24), nullable=False)
+    resource_type = db.Column(db.String(80), nullable=False)
+    resource_id = db.Column(db.String(80))
+    endpoint = db.Column(db.String(160))
+    http_method = db.Column(db.String(10))
+    status_code = db.Column(db.Integer)
+    ip_address = db.Column(db.String(45))
+    user_agent = db.Column(db.String(255))
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=_now)
+    tenant = db.relationship("Tenant")
+    user = db.relationship("User")
+
+
+class TenantMixin:
+    """Coluna de isolamento obrigatório para entidades clínicas."""
+    tenant_id = db.Column(db.Integer, db.ForeignKey("tenant.id"), nullable=False, index=True)
+
 # ============================================================
 # PACIENTE
 # ============================================================
 
-class Paciente(db.Model, TimestampMixin):
+class Paciente(db.Model, TenantMixin, TimestampMixin):
 
     __tablename__ = "paciente"
 
@@ -280,7 +359,7 @@ class Paciente(db.Model, TimestampMixin):
 # MÉDICO
 # ============================================================
 
-class Medico(db.Model, TimestampMixin):
+class Medico(db.Model, TenantMixin, TimestampMixin):
 
     __tablename__ = "medico"
 
@@ -415,7 +494,7 @@ class Medico(db.Model, TimestampMixin):
 # SERVIÇO
 # ============================================================
 
-class Servico(db.Model, TimestampMixin):
+class Servico(db.Model, TenantMixin, TimestampMixin):
 
     __tablename__ = "servico"
 
@@ -487,7 +566,7 @@ class Servico(db.Model, TimestampMixin):
 # CONSULTA
 # ============================================================
 
-class Consulta(db.Model, TimestampMixin):
+class Consulta(db.Model, TenantMixin, TimestampMixin):
 
     __tablename__ = "consulta"
 
@@ -608,7 +687,7 @@ class Consulta(db.Model, TimestampMixin):
 # EXAME
 # ============================================================
 
-class Exame(db.Model, TimestampMixin):
+class Exame(db.Model, TenantMixin, TimestampMixin):
 
     __tablename__ = "exame"
 
@@ -735,7 +814,7 @@ class Exame(db.Model, TimestampMixin):
 # ATENDIMENTO
 # ============================================================
 
-class Atendimento(db.Model, TimestampMixin):
+class Atendimento(db.Model, TenantMixin, TimestampMixin):
 
     __tablename__ = "atendimento"
 
@@ -848,7 +927,7 @@ class Atendimento(db.Model, TimestampMixin):
 # PAGAMENTO
 # ============================================================
 
-class Pagamento(db.Model, TimestampMixin):
+class Pagamento(db.Model, TenantMixin, TimestampMixin):
 
     __tablename__ = "pagamento"
 
@@ -962,7 +1041,7 @@ class Pagamento(db.Model, TimestampMixin):
 # RECEITA
 # ============================================================
 
-class Receita(db.Model, TimestampMixin):
+class Receita(db.Model, TenantMixin, TimestampMixin):
 
     __tablename__ = "receita"
 
@@ -1059,7 +1138,7 @@ class Receita(db.Model, TimestampMixin):
 # MEDICAMENTO
 # ============================================================
 
-class Medicamento(db.Model, TimestampMixin):
+class Medicamento(db.Model, TenantMixin, TimestampMixin):
 
     __tablename__ = "medicamento"
 

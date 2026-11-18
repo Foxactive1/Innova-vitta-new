@@ -151,7 +151,7 @@ def popular_do_csv_oficial():
 
                 try:
                     # Monta dict de dados string
-                    dados = {}
+                    dados = {"tenant_id": 1}  # clínica padrão criada pela migration de tenant
                     for col_csv, attr in mapeamento_str.items():
                         valor = linha.get(col_csv, '').strip()
                         dados[attr] = valor if valor else None
