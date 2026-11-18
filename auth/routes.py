@@ -1,7 +1,7 @@
 import hmac
 from urllib.parse import urlsplit
 
-from flask import Blueprint, current_app, flash, redirect, render_template, request, url_for
+from flask import Blueprint, current_app, flash, redirect, render_template, request, session, url_for
 from flask_login import UserMixin, current_user, login_required, login_user, logout_user
 from werkzeug.security import check_password_hash
 
@@ -80,6 +80,7 @@ def login():
             return render_template("auth/login.html"), 503
 
         if hmac.compare_digest(user.username, username) and _password_is_valid(password):
+            session.clear()
             login_user(user, remember=False)
             target = _safe_next_url(request.args.get("next"))
             return redirect(target or url_for("index"))
