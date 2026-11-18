@@ -1,5 +1,9 @@
 name: tests
 
+concurrency:
+  group: vitta-tests-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches: [main, "hardening/**", "security/**"]
