@@ -81,6 +81,7 @@ def login():
 
         if hmac.compare_digest(user.username, username) and _password_is_valid(password):
             session.clear()
+            session.permanent = True
             login_user(user, remember=False)
             target = _safe_next_url(request.args.get("next"))
             return redirect(target or url_for("index"))
