@@ -68,25 +68,11 @@ def normalizar_cpf(cpf):
 
 def parse_data_hora(data_str, hora_str):
     """
-    Converte data + hora para datetime UTC.
-
-    Esperado:
-        data_str = YYYY-MM-DD
-        hora_str = HH:MM
+    Interpreta data/hora digitada pela clínica no fuso de São Paulo
+    e retorna um datetime aware em UTC para persistência.
     """
-    if not data_str or not hora_str:
-        return None
-
-    try:
-        dt = datetime.strptime(
-            f'{data_str} {hora_str}',
-            '%Y-%m-%d %H:%M'
-        )
-
-        return dt.replace(tzinfo=timezone.utc)
-
-    except (ValueError, TypeError):
-        return None
+    from .time import parse_local_datetime
+    return parse_local_datetime(data_str, hora_str)
 
 
 def parse_data(data_str):
