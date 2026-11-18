@@ -167,7 +167,7 @@ Acesse em: [http://localhost:5000](http://localhost:5000)
 - [ ] Dashboard avançado com Chart.js
 - [x] Testes unitários iniciais com pytest e GitHub Actions
 - [x] Integração de Flask-Migrate com migration incremental de tenant/identidade
-- [x] Testes de tenant/RBAC em SQLite e PostgreSQL no CI
+- [ ] Validação final dos testes SQLite/PostgreSQL no CI
 - [ ] Validar concorrência sob carga e revisar constraints compostas/RLS
 - [ ] Homologação do upgrade no banco real e staging
 - [ ] API REST para integração com apps mobile
