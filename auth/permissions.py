@@ -17,6 +17,18 @@ READ_ROLES = {
     "admin_auditoria": {"admin", "auditor"},
 }
 
+WRITE_ENDPOINT_ROLES = {
+    "pacientes.novo_paciente": {"admin", "recepcao"},
+    "pacientes.editar_paciente": {"admin", "recepcao", "medico"},
+    "pacientes.remover_paciente": {"admin"},
+    "consultas.nova_consulta": {"admin", "medico", "recepcao"},
+    "consultas.confirmar_consulta": {"admin", "medico", "recepcao"},
+    "consultas.cancelar_consulta": {"admin", "medico", "recepcao"},
+    "consultas.realizar_consulta": {"admin", "medico"},
+    "atendimentos.novo_atendimento": {"admin", "medico"},
+    "atendimentos.adicionar_evolucao": {"admin", "medico"},
+}
+
 WRITE_ROLES = {
     "pacientes": {"admin", "recepcao", "medico"},
     "consultas": {"admin", "medico", "recepcao"},
@@ -38,5 +50,5 @@ def role_allowed(endpoint, method, role):
     if method in READ_METHODS:
         allowed = READ_ROLES.get(endpoint, READ_ROLES.get(prefix, set()))
     else:
-        allowed = WRITE_ROLES.get(prefix, set())
+        allowed = WRITE_ENDPOINT_ROLES.get(endpoint, WRITE_ROLES.get(prefix, set()))
     return role in allowed
