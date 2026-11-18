@@ -115,17 +115,30 @@ DEBUG=True
 DATABASE_URL=sqlite:///instance/vitta.db
 ```
 
-**4. Inicialize o banco de dados:**
+**4. Prepare o schema e o primeiro usuário (desenvolvimento local):**
+
+Para um banco novo de desenvolvimento, crie as tabelas atuais uma única vez:
 
 ```bash
 flask shell
 ```
 
 ```python
->>> from app import db
+>>> from core.models import db
 >>> db.create_all()
 >>> exit()
 ```
+
+Gere um hash de senha e crie o administrador persistente:
+
+```bash
+python -c "from werkzeug.security import generate_password_hash; print(generate_password_hash('SENHA-FORTE'))"
+flask --app app create-user --username admin --email admin@exemplo.com --role admin --password-hash 'COLE_O_HASH'
+```
+
+Para banco legado já existente, faça backup e homologação e execute `flask --app app db upgrade`. A migration versionada pressupõe que as nove tabelas clínicas legadas já existam; ela não substitui uma baseline de banco vazio.
+
+**Não use `db.create_all()` para atualizar banco de produção.**
 
 **5. Execute a aplicação:**
 
@@ -139,15 +152,18 @@ Acesse em: [http://localhost:5000](http://localhost:5000)
 
 ## 🗺️ Roadmap
 
-- [x] Autenticação de sessão com Flask-Login (usuário administrativo único)
+- [x] Autenticação persistente com hash de senha e memberships por clínica
+- [x] RBAC por endpoint com política deny-by-default
+- [x] Isolamento ORM por tenant e auditoria de acessos clínicos
+- [x] Rate limiting de login (Redis recomendado em produção)
 - [x] Proteção CSRF com Flask-WTF
 - [ ] Sistema de notificações por SMS e E-mail
 - [ ] Dashboard avançado com Chart.js
 - [x] Testes unitários iniciais com pytest e GitHub Actions
-- [x] Integração de Flask-Migrate (baseline ainda requer revisão)
-- [ ] Testes de integração e concorrência
-- [ ] RBAC persistido e isolamento multi-clínica
-- [ ] Homologação de PostgreSQL em produção
+- [x] Integração de Flask-Migrate com migration incremental de tenant/identidade
+- [x] Testes de tenant/RBAC em SQLite e PostgreSQL no CI
+- [ ] Validar concorrência sob carga e revisar constraints compostas/RLS
+- [ ] Homologação do upgrade no banco real e staging
 - [ ] API REST para integração com apps mobile
 - [ ] Exportação de prontuários em PDF
 
