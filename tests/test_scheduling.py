@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+import os
 
 from flask import Flask
 
@@ -9,7 +10,7 @@ from core.scheduling import find_consultation_conflict
 def make_database():
     app = Flask(__name__)
     app.config.update(
-        SQLALCHEMY_DATABASE_URI="sqlite://",
+        SQLALCHEMY_DATABASE_URI=os.environ.get("TEST_DATABASE_URL", "sqlite://"),
         SQLALCHEMY_TRACK_MODIFICATIONS=False,
     )
     db.init_app(app)
