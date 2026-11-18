@@ -91,15 +91,15 @@ class Tenant(db.Model, TimestampMixin):
     __tablename__ = "tenant"
     id = db.Column(db.Integer, primary_key=True)
     nome = db.Column(db.String(160), nullable=False)
-    slug = db.Column(db.String(80), nullable=False, unique=True, index=True)
+    slug = db.Column(db.String(80), nullable=False, unique=True)
     ativo = db.Column(db.Boolean, nullable=False, default=True)
 
 
 class User(db.Model, UserMixin, TimestampMixin):
     __tablename__ = "app_user"
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(80), nullable=False, unique=True, index=True)
-    email = db.Column(db.String(254), nullable=False, unique=True, index=True)
+    username = db.Column(db.String(80), nullable=False, unique=True)
+    email = db.Column(db.String(254), nullable=False, unique=True)
     password_hash = db.Column(db.String(512), nullable=False)
     ativo = db.Column(db.Boolean, nullable=False, default=True)
     memberships = db.relationship("ClinicMembership", back_populates="user", cascade="all, delete-orphan")
