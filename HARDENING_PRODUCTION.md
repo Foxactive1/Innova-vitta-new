@@ -6,7 +6,11 @@
 - Consultas diárias usam limites locais convertidos para UTC, com intervalo semiaberto [início, fim).
 - Verificação de sobreposição deixa de usar aritmética de datetime específica do SQL e funciona nos dois dialetos suportados.
 - Autocomplete de pacientes retorna somente identificador, nome e idade.
-- Login administrativo exige `ADMIN_PASSWORD_HASH`; senha em texto puro não é aceita.
+- Login usa usuários persistidos com hash de senha Werkzeug e vínculo explícito à clínica.
+- RBAC centralizado com negação por padrão para endpoints não mapeados.
+- Consultas ORM de entidades clínicas são filtradas pelo tenant ativo; novos registros recebem o tenant da sessão.
+- Acesso e alteração a prontuários/consultas/receitas/exames geram eventos de auditoria sem conteúdo clínico.
+- Login limitado a 5 tentativas por minuto e 20 por hora por IP.
 - Erros internos de persistência são registrados no log, sem exibir detalhes SQL ao usuário.
 - Flask-Migrate está integrado para versionamento do schema.
 - Testes unitários e workflow de CI foram adicionados.
@@ -16,8 +20,8 @@
 Configure no provedor de hospedagem, nunca no Git:
 
 - `SECRET_KEY`: segredo aleatório forte (mínimo recomendado de 32 bytes).
-- `ADMIN_USERNAME`: usuário administrativo.
-- `ADMIN_PASSWORD_HASH`: hash Werkzeug gerado localmente.
+- `RATELIMIT_STORAGE_URI`: Redis gerenciado em produção (compartilhado entre workers).
+- `DEFAULT_TENANT_SLUG`: slug da clínica padrão usada no provisionamento inicial.
 - `DATABASE_URL`: PostgreSQL gerenciado para produção.
 - `DEBUG=False`.
 - `SESSION_COOKIE_SECURE=True` quando servido exclusivamente por HTTPS.
@@ -27,6 +31,7 @@ Gere uma chave e um hash com:
 ```bash
 python -c "import secrets; print(secrets.token_urlsafe(48))"
 python -c "from werkzeug.security import generate_password_hash; print(generate_password_hash('SENHA-FORTE-AQUI'))"
+flask --app app create-user --username admin --email admin@seudominio.com --role admin --password-hash 'COLE_O_HASH_GERADO'
 ```
 
 Não coloque a senha original no repositório, em logs ou em tickets. Se a senha já foi configurada em texto puro no provedor, substitua-a pelo hash e remova a variável antiga.
@@ -64,15 +69,25 @@ O workflow GitHub Actions executa os testes unitários em Python 3.12. Os testes
 
 ## Pendências obrigatórias antes de produção
 
-1. Implementar usuários persistidos e RBAC real por clínica/profissional; hoje a autenticação ainda usa um único usuário administrativo de ambiente.
-2. Adicionar rate limiting de login distribuído (Redis ou serviço equivalente) e política de bloqueio/alerta.
-3. Revisar todos os endpoints JSON e serializers para privilégio mínimo; prontuário e dados de saúde são dados pessoais sensíveis.
-4. Adicionar trilha de auditoria imutável para leitura/alteração de prontuários, exportações e ações administrativas.
-5. Validar isolamento multi-clínica (tenant_id) antes de oferecer SaaS multi-tenant.
-6. Adicionar testes de integração e concorrência para evitar dupla reserva em requisições simultâneas; considerar restrição/lock transacional por médico e janela.
-7. Definir backup automatizado, retenção, restauração testada, monitoramento e plano de resposta a incidentes.
+1. Revisar o mapa RBAC com a direção clínica e aplicar testes de autorização por rota, inclusive APIs e exportações.
+2. Configurar Redis para que o rate limit seja distribuído entre todos os workers; memory:// serve apenas para desenvolvimento.
+3. Estender a trilha de auditoria a exportações, downloads, relatórios e ações administrativas. A tabela é append-only na camada da aplicação, mas não substitui controles de imutabilidade no banco/backup.
+4. Revisar chaves estrangeiras compostas por tenant para impedir referências cruzadas mesmo em operações SQL diretas.
+5. Executar testes de integração PostgreSQL/Neon e concorrência real de agendamento; o bloqueio de linha do médico é aplicado no fluxo de criação, mas precisa ser validado sob carga.
+6. Criar usuários/membros com processo de convite, recuperação de senha, MFA e desativação auditada.
+7. Definir backup automatizado, retenção, restauração testada, monitoramento e resposta a incidentes.
 8. Fazer avaliação LGPD com base legal, finalidade, minimização, retenção, direitos dos titulares e contratos com operadores.
-9. Validar deploy real em staging com PostgreSQL, HTTPS, variáveis e smoke tests.
+9. Homologar staging com dados sintéticos, revisar migration e executar smoke tests antes de produção.
+
+## Segunda etapa — identidade, RBAC e isolamento
+
+A revisão `20261118_security_tenant` cria a clínica padrão, usuários, memberships e auditoria, adicionando `tenant_id` às nove tabelas clínicas existentes e atribuindo os registros legados à clínica padrão (id 1). Ela pressupõe que o schema legado já existe. Em banco vazio, crie/revise uma baseline antes de executar upgrade.
+
+Após backup e homologação, execute `flask --app app db upgrade` e provisione o primeiro administrador com `flask --app app create-user --username ... --email ... --role admin --password-hash ...`. Não habilite autenticação persistente antes da migration e do provisionamento.
+
+A sessão autenticada define o tenant ativo; o ORM aplica filtro global às entidades clínicas e atribui o tenant em novos registros. Dados sem tenant não são retornados em sessões autenticadas. A política RBAC nega endpoints desconhecidos a perfis não administrativos. O log registra metadados de acesso, nunca conteúdo de prontuário.
+
+O rate limit usa memória por padrão apenas em desenvolvimento. Em produção configure `RATELIMIT_STORAGE_URI` com Redis compartilhado. Não há ainda interface de administração de usuários, MFA, fluxo de convite/recuperação, nem garantias de isolamento por constraints compostas para SQL direto.
 
 ## Critério de aceite
 
