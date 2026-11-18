@@ -2,87 +2,66 @@ import hmac
 from urllib.parse import urlsplit
 
 from flask import Blueprint, current_app, flash, redirect, render_template, request, url_for
-from flask_login import UserMixin, current_user, login_required, login_user, logout_user
+from flask_login import current_user, login_required, login_user, logout_user
+from sqlalchemy import or_
+from sqlalchemy.exc import SQLAlchemyError
 from werkzeug.security import check_password_hash
 
-from extensions import login_manager
+from core.models import User, db
+from extensions import limiter, login_manager
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
 
 
-class SessionUser(UserMixin):
-    """Usuário temporário baseado em credenciais de ambiente.
-
-    Esta implementação não altera o schema atual. Na próxima fase,
-    pode ser substituída por um modelo Usuario persistido via Alembic.
-    """
-
-    def __init__(self, username: str, role: str = "admin"):
-        self.username = username
-        self.role = role
-
-    def get_id(self):
-        return self.username
-
-
-def _configured_user():
-    username = current_app.config.get("ADMIN_USERNAME")
-    if not username:
-        return None
-    return SessionUser(username=username, role=current_app.config.get("ADMIN_ROLE", "admin"))
-
-
 @login_manager.user_loader
 def load_user(user_id):
-    user = _configured_user()
-    if user and hmac.compare_digest(str(user.get_id()), str(user_id)):
-        return user
-    return None
-
-
-def _password_is_valid(candidate: str) -> bool:
-    password_hash = current_app.config.get("ADMIN_PASSWORD_HASH")
-    if not password_hash:
-        return False
     try:
-        return check_password_hash(password_hash, candidate)
-    except (ValueError, TypeError):
-        return False
+        user = db.session.get(User, int(user_id))
+        return user if user and user.is_active else None
+    except (ValueError, SQLAlchemyError):
+        db.session.rollback()
+        current_app.logger.exception("Falha ao carregar usuário da sessão")
+        return None
 
 
-def _safe_next_url(target: str | None) -> str | None:
+def _safe_next_url(target):
     if not target:
         return None
     parsed = urlsplit(target)
-    if parsed.scheme or parsed.netloc:
-        return None
-    if not target.startswith("/"):
+    if parsed.scheme or parsed.netloc or not target.startswith("/"):
         return None
     return target
 
 
 @auth_bp.route("/login", methods=["GET", "POST"])
+@limiter.limit("5 per minute; 20 per hour")
 def login():
     if current_user.is_authenticated:
         return redirect(url_for("index"))
 
     if request.method == "POST":
-        user = _configured_user()
-        username = request.form.get("username", "").strip()
+        identifier = request.form.get("username", "").strip()
         password = request.form.get("password", "")
-
-        if not user or not current_app.config.get("ADMIN_PASSWORD_HASH"):
-            flash(
-                "Credenciais administrativas não configuradas. Defina ADMIN_USERNAME e ADMIN_PASSWORD_HASH. Senhas em texto puro não são aceitas.",
-                "danger",
+        try:
+            user = User.query.filter(
+                or_(User.username == identifier, User.email == identifier)
+            ).first()
+            valid = bool(
+                user and user.is_active and
+                check_password_hash(user.password_hash, password)
             )
+        except (SQLAlchemyError, ValueError, TypeError):
+            db.session.rollback()
+            current_app.logger.exception("Falha durante autenticação persistente")
+            flash("Serviço de autenticação temporariamente indisponível.", "danger")
             return render_template("auth/login.html"), 503
 
-        if hmac.compare_digest(user.username, username) and _password_is_valid(password):
-            login_user(user, remember=False)
+        if valid:
+            login_user(user, remember=False, fresh=True)
             target = _safe_next_url(request.args.get("next"))
             return redirect(target or url_for("index"))
 
+        # Não revela se o usuário existe.
         flash("Usuário ou senha inválidos.", "danger")
 
     return render_template("auth/login.html")
