@@ -51,7 +51,7 @@ class Config:
     ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "admin")
     ADMIN_ROLE = os.environ.get("ADMIN_ROLE", "admin")
     ADMIN_PASSWORD_HASH = os.environ.get("ADMIN_PASSWORD_HASH")
-    ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD")
+    # Senhas em texto puro nao sao aceitas pelo fluxo de autenticacao.
 
     # Segurança de sessão.
     SESSION_COOKIE_HTTPONLY = True
