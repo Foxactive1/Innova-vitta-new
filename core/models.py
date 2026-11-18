@@ -95,7 +95,7 @@ class Tenant(db.Model, TimestampMixin):
     ativo = db.Column(db.Boolean, nullable=False, default=True)
 
 
-class User(db.Model, UserMixin, TimestampMixin):
+class User(UserMixin, db.Model, TimestampMixin):
     __tablename__ = "app_user"
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), nullable=False, unique=True)
