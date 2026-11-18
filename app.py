@@ -186,7 +186,9 @@ def create_app(config_object="config.Config"):
             .limit(10)
             .all()
         )
-        return jsonify([p.to_dict() for p in pacientes])
+        # Minimizacao de dados: a busca/autocomplete nao precisa expor
+        # CPF, RG, endereco ou informacoes clinicas.
+        return jsonify([{"id": p.id, "nome": p.nome, "idade": p.idade} for p in pacientes])
 
     @app.route("/api/horarios-disponiveis")
     def api_horarios_disponiveis():
