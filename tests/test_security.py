@@ -1,7 +1,8 @@
 from flask import Flask, g
+import pytest
 import os
 
-from core.models import ClinicMembership, Paciente, Tenant, User, db
+from core.models import Atendimento, ClinicMembership, Paciente, Tenant, User, db
 from core.tenancy import _scope_queries_to_active_tenant  # registers ORM hooks
 from auth.permissions import role_allowed
 
@@ -16,15 +17,19 @@ def test_tenant_scope_hides_records_from_other_clinics():
         clinic_b = Tenant(nome="Clínica B", slug="clinic-b")
         db.session.add_all([clinic_a, clinic_b])
         db.session.flush()
-        db.session.add_all([
-            Paciente(nome="Paciente A", tenant_id=clinic_a.id),
-            Paciente(nome="Paciente B", tenant_id=clinic_b.id),
-        ])
+        patient_a = Paciente(nome="Paciente A", tenant_id=clinic_a.id)
+        patient_b = Paciente(nome="Paciente B", tenant_id=clinic_b.id)
+        db.session.add_all([patient_a, patient_b])
         db.session.commit()
+        patient_b_id = patient_b.id
 
         with app.test_request_context():
             g.active_tenant_id = clinic_a.id
             assert [p.nome for p in Paciente.query.all()] == ["Paciente A"]
+            db.session.add(Atendimento(paciente_id=patient_b_id))
+            with pytest.raises(PermissionError):
+                db.session.commit()
+            db.session.rollback()
 
         db.drop_all()
 
