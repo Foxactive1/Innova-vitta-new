@@ -1,6 +1,5 @@
 """Tenant isolation hooks for SQLAlchemy ORM sessions."""
-from flask import has_request_context
-from flask_login import current_user
+from flask import g, has_request_context
 from sqlalchemy import event
 from sqlalchemy.orm import Session, with_loader_criteria
 
@@ -11,9 +10,9 @@ from core.models import AuditLog, TenantMixin
 def _scope_queries_to_active_tenant(execute_state):
     if not execute_state.is_select or execute_state.execution_options.get("skip_tenant_scope"):
         return
-    if not has_request_context() or not current_user.is_authenticated:
+    if not has_request_context():
         return
-    tenant_id = getattr(current_user, "tenant_id", None)
+    tenant_id = getattr(g, "active_tenant_id", None)
     if tenant_id is None:
         return
     execute_state.statement = execute_state.statement.options(
@@ -27,11 +26,11 @@ def _scope_queries_to_active_tenant(execute_state):
 
 @event.listens_for(Session, "before_flush")
 def _assign_and_validate_tenant(session, flush_context, instances):
-    if not has_request_context() or not current_user.is_authenticated:
+    if not has_request_context():
         return
-    tenant_id = getattr(current_user, "tenant_id", None)
+    tenant_id = getattr(g, "active_tenant_id", None)
     if tenant_id is None:
-        raise PermissionError("Usuário autenticado sem vínculo ativo com clínica.")
+        return
     for obj in session.new:
         if isinstance(obj, TenantMixin):
             if obj.tenant_id is None:
