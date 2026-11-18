@@ -114,7 +114,7 @@ def create_app(config_object="config.Config"):
         if not current_user.is_authenticated:
             return response
         endpoint = request.endpoint or ""
-        resource = endpoint.split(".", 1)[0]
+        resource = "pacientes" if endpoint == "api_busca_paciente" else endpoint.split(".", 1)[0]
         if resource not in {"pacientes", "atendimentos", "consultas", "exames", "receitas", "relatorios"}:
             return response
         tenant_id = getattr(current_user, "tenant_id", None)
