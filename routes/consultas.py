@@ -95,13 +95,16 @@ def nova_consulta():
             flash('Não é possível agendar no passado.', 'danger')
             return redirect(url_for('consultas.nova_consulta'))
 
-        # Verifica conflito (sobreposição de 1 hora)
-        fim_consulta = data_hora + timedelta(hours=1)
+        # Duracao padrao atual: 60 minutos. Evita aritmetica sobre coluna SQL,
+        # mantendo compatibilidade entre SQLite e PostgreSQL.
+        duracao = timedelta(hours=1)
+        fim_consulta = data_hora + duracao
+        inicio_minimo = data_hora - duracao
         conflito = Consulta.query.filter(
             Consulta.medico_id == medico_id,
             Consulta.status != 'cancelada',
             Consulta.data_hora < fim_consulta,
-            Consulta.data_hora + timedelta(hours=1) > data_hora
+            Consulta.data_hora > inicio_minimo
         ).first()
         if conflito:
             flash('Horário já ocupado (ou sobreposto).', 'danger')
