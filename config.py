@@ -47,10 +47,10 @@ class Config:
             "pool_recycle": 300,
         }
 
-    # Bootstrap de autenticação sem alteração de schema.
-    ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "admin")
-    ADMIN_ROLE = os.environ.get("ADMIN_ROLE", "admin")
-    ADMIN_PASSWORD_HASH = os.environ.get("ADMIN_PASSWORD_HASH")
+    # Rate limit: use Redis gerenciado em produção para estado compartilhado.
+    RATELIMIT_STORAGE_URI = os.environ.get("RATELIMIT_STORAGE_URI", "memory://")
+    RATELIMIT_HEADERS_ENABLED = True
+    DEFAULT_TENANT_SLUG = os.environ.get("DEFAULT_TENANT_SLUG", "clinica-vida-plus")
 
     # Segurança de sessão.
     SESSION_COOKIE_HTTPONLY = True
