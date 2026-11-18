@@ -12,7 +12,7 @@ from flask_login import current_user
 
 from auth import auth_bp
 from core.models import Atendimento, Consulta, Exame, Medico, Paciente, Pagamento, Receita, db
-from extensions import csrf, login_manager
+from extensions import csrf, login_manager, migrate
 from routes.atendimentos import atendimentos_bp
 from routes.consultas import consultas_bp
 from routes.exames import exames_bp
@@ -36,6 +36,7 @@ def create_app(config_object="config.Config"):
     os.makedirs(app.instance_path, exist_ok=True)
 
     db.init_app(app)
+    migrate.init_app(app, db)
     login_manager.init_app(app)
     csrf.init_app(app)
 
