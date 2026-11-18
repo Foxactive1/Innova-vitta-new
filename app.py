@@ -7,7 +7,7 @@ import json
 import os
 from datetime import date, datetime, timedelta, timezone
 
-from flask import Flask, jsonify, redirect, render_template, request, url_for, abort
+from flask import Flask, jsonify, redirect, render_template, request, url_for, abort, g
 import click
 from flask_login import current_user
 
@@ -68,6 +68,10 @@ def create_app(config_object="config.Config"):
             return None
 
         if current_user.is_authenticated:
+            tenant_id = getattr(current_user, "tenant_id", None)
+            if tenant_id is None:
+                abort(403)
+            g.active_tenant_id = tenant_id
             if not role_allowed(endpoint, request.method, getattr(current_user, "role", None)):
                 abort(403)
             return None
