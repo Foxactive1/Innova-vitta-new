@@ -124,17 +124,18 @@ def create_app(config_object="config.Config"):
         resource_id = next((str(view_args[k]) for k in ("id", "pid", "aid", "cid") if k in view_args), None)
         action = "read" if request.method in {"GET", "HEAD"} else "write"
         try:
-            db.session.add(AuditLog(
-                tenant_id=tenant_id, user_id=current_user.id, action=action,
-                resource_type=resource, resource_id=resource_id,
-                endpoint=endpoint[:160], http_method=request.method[:10],
-                status_code=response.status_code,
-                ip_address=(request.remote_addr or "")[:45],
-                user_agent=(request.user_agent.string or "")[:255],
-            ))
-            db.session.commit()
+            # Independent transaction: audit logging must not commit or roll back
+            # business changes left by the view.
+            with db.engine.begin() as connection:
+                connection.execute(AuditLog.__table__.insert().values(
+                    tenant_id=tenant_id, user_id=current_user.id, action=action,
+                    resource_type=resource, resource_id=resource_id,
+                    endpoint=endpoint[:160], http_method=request.method[:10],
+                    status_code=response.status_code,
+                    ip_address=(request.remote_addr or "")[:45],
+                    user_agent=(request.user_agent.string or "")[:255],
+                ))
         except Exception:
-            db.session.rollback()
             app.logger.exception("Falha ao registrar evento de auditoria")
         return response
 
