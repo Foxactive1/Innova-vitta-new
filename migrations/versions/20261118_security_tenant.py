@@ -76,17 +76,19 @@ def upgrade():
     op.create_index("ix_audit_log_user_id", "audit_log", ["user_id"])
 
     for table in CLINICAL_TABLES:
-        op.add_column(table, sa.Column("tenant_id", sa.Integer(), nullable=True))
+        with op.batch_alter_table(table) as batch_op:
+            batch_op.add_column(sa.Column("tenant_id", sa.Integer(), nullable=True))
+            batch_op.create_foreign_key(f"fk_{table}_tenant_id_tenant", "tenant", ["tenant_id"], ["id"])
         op.execute(sa.text(f"UPDATE {table} SET tenant_id = 1 WHERE tenant_id IS NULL"))
-        op.create_foreign_key(f"fk_{table}_tenant_id_tenant", table, "tenant", ["tenant_id"], ["id"])
         op.create_index(f"ix_{table}_tenant_id", table, ["tenant_id"])
 
 
 def downgrade():
     for table in reversed(CLINICAL_TABLES):
         op.drop_index(f"ix_{table}_tenant_id", table_name=table)
-        op.drop_constraint(f"fk_{table}_tenant_id_tenant", table, type_="foreignkey")
-        op.drop_column(table, "tenant_id")
+        with op.batch_alter_table(table) as batch_op:
+            batch_op.drop_constraint(f"fk_{table}_tenant_id_tenant", type_="foreignkey")
+            batch_op.drop_column("tenant_id")
     op.drop_index("ix_audit_log_user_id", table_name="audit_log")
     op.drop_index("ix_audit_log_tenant_id", table_name="audit_log")
     op.drop_table("audit_log")
