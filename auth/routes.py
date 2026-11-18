@@ -42,16 +42,11 @@ def load_user(user_id):
 
 def _password_is_valid(candidate: str) -> bool:
     password_hash = current_app.config.get("ADMIN_PASSWORD_HASH")
-    password_plain = current_app.config.get("ADMIN_PASSWORD")
-
     if password_hash:
         try:
             return check_password_hash(password_hash, candidate)
         except (ValueError, TypeError):
             return False
-
-    if password_plain:
-        return hmac.compare_digest(str(password_plain), str(candidate))
 
     return False
 
@@ -77,9 +72,9 @@ def login():
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "")
 
-        if not user or not current_app.config.get("ADMIN_PASSWORD_HASH") and not current_app.config.get("ADMIN_PASSWORD"):
+        if not user or not current_app.config.get("ADMIN_PASSWORD_HASH"):
             flash(
-                "Credenciais administrativas não configuradas. Defina ADMIN_USERNAME e ADMIN_PASSWORD_HASH (recomendado).",
+                "Credenciais administrativas não configuradas. Defina ADMIN_USERNAME e ADMIN_PASSWORD_HASH.",
                 "danger",
             )
             return render_template("auth/login.html"), 503
