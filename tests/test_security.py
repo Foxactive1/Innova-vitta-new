@@ -1,4 +1,5 @@
 from flask import Flask, g
+import os
 
 from core.models import ClinicMembership, Paciente, Tenant, User, db
 from core.tenancy import _scope_queries_to_active_tenant  # registers ORM hooks
@@ -7,7 +8,7 @@ from auth.permissions import role_allowed
 
 def test_tenant_scope_hides_records_from_other_clinics():
     app = Flask(__name__)
-    app.config.update(SQLALCHEMY_DATABASE_URI="sqlite://", SQLALCHEMY_TRACK_MODIFICATIONS=False)
+    app.config.update(SQLALCHEMY_DATABASE_URI=os.environ.get("TEST_DATABASE_URL", "sqlite://"), SQLALCHEMY_TRACK_MODIFICATIONS=False)
     db.init_app(app)
     with app.app_context():
         db.create_all()
