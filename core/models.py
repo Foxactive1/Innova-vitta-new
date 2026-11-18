@@ -182,7 +182,7 @@ class Paciente(db.Model, TimestampMixin):
         if not self.data_nascimento:
             return None
 
-        hoje = date.today()
+        hoje = datetime.now(CLINIC_TIMEZONE).date()
 
         return (
             hoje.year
