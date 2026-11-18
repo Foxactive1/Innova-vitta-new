@@ -259,7 +259,7 @@ def estatisticas_gerais():
     # PostgreSQL / Neon
     # --------------------------------------------------------
 
-    hoje = date.today()
+    hoje = datetime.now(CLINIC_TIMEZONE).date()
 
     inicio = datetime(
         hoje.year - 1,
