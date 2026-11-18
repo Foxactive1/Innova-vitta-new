@@ -38,19 +38,16 @@ Não coloque a senha original no repositório, em logs ou em tickets. Se a senha
 
 ## Migrações do banco
 
-Flask-Migrate foi registrado, mas nenhuma migração inicial foi gerada automaticamente nesta branch. Isso é intencional: a criação de uma baseline precisa ser feita contra uma cópia do banco real e revisada antes de produção.
+O diretório `migrations/` contém a revisão incremental `20261118_security_tenant`. Ela cria as tabelas de identidade, memberships e auditoria, cria a clínica padrão (id 1), adiciona `tenant_id` às nove tabelas clínicas e associa os registros existentes à clínica padrão.
 
-Em ambiente de desenvolvimento com banco descartável:
+**Pré-condição:** o banco já precisa conter o schema legado da aplicação. A revisão não é uma baseline para banco vazio. Antes de executar:
 
-```bash
-flask --app app db init
-flask --app app db migrate -m "initial schema"
-flask --app app db upgrade
-```
+1. Faça backup verificável e restaure-o em staging.
+2. Compare os nomes e tipos das nove tabelas legadas com o schema esperado.
+3. Execute `flask --app app db upgrade` em staging e valide contagens, relacionamentos e consultas.
+4. Só então programe a janela de manutenção e aplique no banco de produção.
 
-Revise e versione o diretório `migrations/`. Em banco que já contém tabelas, não execute uma migração inicial sem comparar o schema e fazer backup. A equipe deve decidir se a baseline será aplicada ou se o banco existente será marcado com `flask db stamp` após validação.
-
-Não execute `db.create_all()` como substituto de migrations em produção.
+Se o banco estiver vazio, primeiro gere e revise uma baseline do schema legado; não aplique esta revisão isoladamente. Não rode `flask db init` porque o diretório de migrations já está versionado. Não execute `db.create_all()` como substituto de migrations em produção.
 
 ## Atenção: registros de consulta já existentes
 
