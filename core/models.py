@@ -201,6 +201,14 @@ class Paciente(db.Model, TimestampMixin):
     # Serialização
     # --------------------------------------------------------
 
+    def to_dict_resumo(self):
+        """Campos mínimos para autocomplete e listagens operacionais."""
+        return {
+            "id": self.id,
+            "nome": self.nome,
+            "idade": self.idade,
+        }
+
     def to_dict(self):
 
         return {
