@@ -8,7 +8,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from werkzeug.security import check_password_hash
 
 from core.models import User, db
-from extensions import limiter, login_manager
+from extensions import limiter, login_manager, login_rate_key
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
 
@@ -34,7 +34,8 @@ def _safe_next_url(target):
 
 
 @auth_bp.route("/login", methods=["GET", "POST"])
-@limiter.limit("5 per minute; 20 per hour")
+@limiter.limit("5 per minute; 20 per hour", key_func=login_rate_key)
+@limiter.limit("30 per hour", key_func=lambda: request.remote_addr or "unknown")
 def login():
     if current_user.is_authenticated:
         return redirect(url_for("index"))
