@@ -61,7 +61,7 @@ def create_app(config_object="config.Config"):
 
     @app.before_request
     def require_authentication():
-        allowed = {"auth.login", "static"}
+        allowed = {"auth.login", "auth.logout", "static"}
         endpoint = request.endpoint
 
         if endpoint is None or endpoint in allowed:
