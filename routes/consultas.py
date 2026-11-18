@@ -1,9 +1,11 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app
 from sqlalchemy.orm import joinedload
 from sqlalchemy.exc import SQLAlchemyError
-from datetime import datetime, date, timezone, timedelta
+from datetime import datetime, date, timezone
 from core.models import db, Consulta, Paciente, Medico, Servico
 from core.utils import validar_valor, parse_data_hora
+from core.time import local_day_bounds, local_now
+from core.scheduling import find_consultation_conflict
 
 consultas_bp = Blueprint('consultas', __name__, url_prefix='/consultas')
 
@@ -25,17 +27,18 @@ def listar_consultas():
         query = query.filter(Consulta.status == status)
     if data_inicio:
         try:
-            dt = datetime.strptime(data_inicio, '%Y-%m-%d').replace(tzinfo=timezone.utc)
-            query = query.filter(Consulta.data_hora >= dt)
+            inicio_local = datetime.strptime(data_inicio, '%Y-%m-%d').date()
+            inicio_utc, _ = local_day_bounds(inicio_local)
+            query = query.filter(Consulta.data_hora >= inicio_utc)
         except ValueError:
-            pass
+            flash('Data inicial inválida; filtro ignorado.', 'warning')
     if data_fim:
         try:
-            dt = datetime.strptime(data_fim, '%Y-%m-%d').replace(tzinfo=timezone.utc)
-            dt = dt.replace(hour=23, minute=59, second=59)
-            query = query.filter(Consulta.data_hora <= dt)
+            fim_local = datetime.strptime(data_fim, '%Y-%m-%d').date()
+            _, fim_exclusivo_utc = local_day_bounds(fim_local)
+            query = query.filter(Consulta.data_hora < fim_exclusivo_utc)
         except ValueError:
-            pass
+            flash('Data final inválida; filtro ignorado.', 'warning')
 
     consultas = query.order_by(Consulta.data_hora.desc()).paginate(page=page, per_page=per_page, error_out=False)
 
@@ -95,14 +98,8 @@ def nova_consulta():
             flash('Não é possível agendar no passado.', 'danger')
             return redirect(url_for('consultas.nova_consulta'))
 
-        # Verifica conflito (sobreposição de 1 hora)
-        fim_consulta = data_hora + timedelta(hours=1)
-        conflito = Consulta.query.filter(
-            Consulta.medico_id == medico_id,
-            Consulta.status != 'cancelada',
-            Consulta.data_hora < fim_consulta,
-            Consulta.data_hora + timedelta(hours=1) > data_hora
-        ).first()
+        # Verifica sobreposição sem aritmética datetime específica do banco.
+        conflito = find_consultation_conflict(medico_id, data_hora)
         if conflito:
             flash('Horário já ocupado (ou sobreposto).', 'danger')
             return redirect(url_for('consultas.nova_consulta'))
@@ -122,16 +119,17 @@ def nova_consulta():
         try:
             db.session.add(consulta)
             db.session.commit()
-        except SQLAlchemyError as e:
+        except SQLAlchemyError:
             db.session.rollback()
-            flash(f'Erro ao agendar: {str(e)}', 'danger')
+            current_app.logger.exception("Falha ao persistir agendamento")
+            flash('Não foi possível concluir o agendamento. Tente novamente.', 'danger')
             return redirect(url_for('consultas.nova_consulta'))
 
         flash(f'Consulta agendada! Serviço: {servico.nome} - R$ {float(servico.valor):.2f}', 'success')
         return redirect(url_for('consultas.listar_consultas'))
 
     return render_template('consultas_form.html', pacientes=pacientes, medicos=medicos,
-                           servicos=servicos, hoje=date.today().isoformat())
+                           servicos=servicos, hoje=local_now().date().isoformat())
 
 @consultas_bp.route('/<int:cid>/confirmar', methods=['POST'])
 def confirmar_consulta(cid):

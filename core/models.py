@@ -201,6 +201,14 @@ class Paciente(db.Model, TimestampMixin):
     # Serialização
     # --------------------------------------------------------
 
+    def to_dict_resumo(self):
+        """Campos mínimos para autocomplete e listagens operacionais."""
+        return {
+            "id": self.id,
+            "nome": self.nome,
+            "idade": self.idade,
+        }
+
     def to_dict(self):
 
         return {
@@ -381,54 +389,25 @@ class Medico(db.Model, TimestampMixin):
     # --------------------------------------------------------
 
     def horarios_ocupados(self, data):
-        """
-        Retorna os horários ocupados de um médico em uma data.
+        """Retorna intervalos ocupados no relógio local da clínica."""
+        from .time import local_day_bounds, as_clinic_time
 
-        PostgreSQL/Neon utiliza:
-            timestamp with time zone
-
-        Portanto os limites são explicitamente UTC-aware.
-        """
-
-        inicio = datetime.combine(
-            data,
-            time.min,
-            tzinfo=timezone.utc
-        )
-
-        fim = datetime.combine(
-            data,
-            time.max,
-            tzinfo=timezone.utc
-        )
-
+        inicio, fim = local_day_bounds(data)
         consultas = Consulta.query.filter(
             Consulta.medico_id == self.id,
             Consulta.data_hora >= inicio,
-            Consulta.data_hora <= fim,
-            Consulta.status != "cancelada"
+            Consulta.data_hora < fim,
+            Consulta.status != "cancelada",
         ).all()
 
         ocupados = []
-
         for consulta in consultas:
-
-            inicio_consulta = _ensure_utc(
-                consulta.data_hora
-            )
-
-            fim_consulta = (
-                inicio_consulta
-                + timedelta(hours=1)
-            )
-
-            ocupados.append(
-                (
-                    inicio_consulta.strftime("%H:%M"),
-                    fim_consulta.strftime("%H:%M")
-                )
-            )
-
+            inicio_local = as_clinic_time(consulta.data_hora)
+            fim_local = inicio_local + timedelta(hours=1)
+            ocupados.append((
+                inicio_local.strftime("%H:%M"),
+                fim_local.strftime("%H:%M"),
+            ))
         return ocupados
 
 
