@@ -53,7 +53,7 @@ def _assign_and_validate_tenant(session, flush_context, instances):
             raise PermissionError("Não é permitido alterar dados de outra clínica.")
     # ORM scoping alone is insufficient when a form submits a raw foreign-key ID.
     # Validate every clinical relation against the same tenant using Core SQL.
-    for obj in session.new.union(session.dirty):
+    for obj in list(session.new) + list(session.dirty):
         if not isinstance(obj, TenantMixin):
             continue
         for field, target_model in FOREIGN_TENANT_REFERENCES.get(type(obj), {}).items():
