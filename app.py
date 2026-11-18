@@ -21,6 +21,7 @@ from routes.pacientes import pacientes_bp
 from routes.receitas import receitas_bp
 from routes.relatorios import relatorios_bp
 from routes.servicos import servicos_bp
+from core.time import local_now, local_day_bounds
 
 
 def create_app(config_object="config.Config"):
@@ -109,11 +110,9 @@ def create_app(config_object="config.Config"):
 
     @app.route("/")
     def index():
-        hoje = date.today()
+        hoje = local_now().date()
         now_utc = datetime.now(timezone.utc)
-
-        inicio_hoje = datetime.combine(hoje, datetime.min.time()).replace(tzinfo=timezone.utc)
-        fim_hoje = datetime.combine(hoje, datetime.max.time()).replace(tzinfo=timezone.utc)
+        inicio_hoje, fim_hoje_exclusivo = local_day_bounds(hoje)
 
         total_pacientes = Paciente.query.count()
         total_medicos = Medico.query.count()
@@ -121,7 +120,7 @@ def create_app(config_object="config.Config"):
         consultas_hoje = (
             Consulta.query.filter(
                 Consulta.data_hora >= inicio_hoje,
-                Consulta.data_hora <= fim_hoje,
+                Consulta.data_hora < fim_hoje_exclusivo,
                 Consulta.status != "cancelada",
             ).count()
         )
@@ -129,7 +128,7 @@ def create_app(config_object="config.Config"):
         atendimentos_hoje = (
             Atendimento.query.filter(
                 Atendimento.data >= inicio_hoje,
-                Atendimento.data <= fim_hoje,
+                Atendimento.data < fim_hoje_exclusivo,
             ).count()
         )
 
