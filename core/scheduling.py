@@ -1,5 +1,6 @@
 """Database-portable consultation overlap checks."""
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 from .models import Consulta
 from .time import as_utc, local_day_bounds
@@ -22,7 +23,7 @@ def find_consultation_conflict(medico_id: int, start: datetime,
 
     start_utc = as_utc(start)
     end_utc = start_utc + timedelta(minutes=duration_minutes)
-    local_day = start_utc.astimezone(__import__("zoneinfo").ZoneInfo("America/Sao_Paulo")).date()
+    local_day = start_utc.astimezone(ZoneInfo("America/Sao_Paulo")).date()
     day_start, day_end = local_day_bounds(local_day)
     search_start = day_start - timedelta(days=1)
     search_end = day_end + timedelta(days=1)
