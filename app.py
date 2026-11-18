@@ -21,6 +21,7 @@ from routes.pacientes import pacientes_bp
 from routes.receitas import receitas_bp
 from routes.relatorios import relatorios_bp
 from routes.servicos import servicos_bp
+from core.time_utils import CLINIC_TIMEZONE, local_day_utc_bounds
 
 
 def create_app(config_object="config.Config"):
@@ -109,11 +110,10 @@ def create_app(config_object="config.Config"):
 
     @app.route("/")
     def index():
-        hoje = date.today()
+        hoje = datetime.now(CLINIC_TIMEZONE).date()
         now_utc = datetime.now(timezone.utc)
 
-        inicio_hoje = datetime.combine(hoje, datetime.min.time()).replace(tzinfo=timezone.utc)
-        fim_hoje = datetime.combine(hoje, datetime.max.time()).replace(tzinfo=timezone.utc)
+        inicio_hoje, fim_hoje = local_day_utc_bounds(hoje)
 
         total_pacientes = Paciente.query.count()
         total_medicos = Medico.query.count()
@@ -121,7 +121,7 @@ def create_app(config_object="config.Config"):
         consultas_hoje = (
             Consulta.query.filter(
                 Consulta.data_hora >= inicio_hoje,
-                Consulta.data_hora <= fim_hoje,
+                Consulta.data_hora < fim_hoje,
                 Consulta.status != "cancelada",
             ).count()
         )
@@ -129,7 +129,7 @@ def create_app(config_object="config.Config"):
         atendimentos_hoje = (
             Atendimento.query.filter(
                 Atendimento.data >= inicio_hoje,
-                Atendimento.data <= fim_hoje,
+                Atendimento.data < fim_hoje,
             ).count()
         )
 
@@ -186,7 +186,9 @@ def create_app(config_object="config.Config"):
             .limit(10)
             .all()
         )
-        return jsonify([p.to_dict() for p in pacientes])
+        # Minimizacao de dados: a busca/autocomplete nao precisa expor
+        # CPF, RG, endereco ou informacoes clinicas.
+        return jsonify([{"id": p.id, "nome": p.nome, "idade": p.idade} for p in pacientes])
 
     @app.route("/api/horarios-disponiveis")
     def api_horarios_disponiveis():

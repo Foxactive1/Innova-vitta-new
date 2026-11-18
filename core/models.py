@@ -182,7 +182,7 @@ class Paciente(db.Model, TimestampMixin):
         if not self.data_nascimento:
             return None
 
-        hoje = date.today()
+        hoje = datetime.now(CLINIC_TIMEZONE).date()
 
         return (
             hoje.year
@@ -390,22 +390,12 @@ class Medico(db.Model, TimestampMixin):
         Portanto os limites são explicitamente UTC-aware.
         """
 
-        inicio = datetime.combine(
-            data,
-            time.min,
-            tzinfo=timezone.utc
-        )
-
-        fim = datetime.combine(
-            data,
-            time.max,
-            tzinfo=timezone.utc
-        )
+        inicio, fim = local_day_utc_bounds(data)
 
         consultas = Consulta.query.filter(
             Consulta.medico_id == self.id,
             Consulta.data_hora >= inicio,
-            Consulta.data_hora <= fim,
+            Consulta.data_hora < fim,
             Consulta.status != "cancelada"
         ).all()
 
@@ -413,14 +403,8 @@ class Medico(db.Model, TimestampMixin):
 
         for consulta in consultas:
 
-            inicio_consulta = _ensure_utc(
-                consulta.data_hora
-            )
-
-            fim_consulta = (
-                inicio_consulta
-                + timedelta(hours=1)
-            )
+            inicio_consulta = utc_to_local(consulta.data_hora)
+            fim_consulta = inicio_consulta + timedelta(hours=1)
 
             ocupados.append(
                 (

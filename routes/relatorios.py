@@ -2,12 +2,13 @@ from flask import Blueprint, render_template, request, jsonify, Response
 from datetime import datetime, date, timezone
 from core.models import db
 from core.utils import relatorio_mensal, exportar_dados, tabela_verdade_consulta_normal, tabela_verdade_emergencia
+from core.time_utils import CLINIC_TIMEZONE
 
 relatorios_bp = Blueprint('relatorios', __name__, url_prefix='/relatorios')
 
 @relatorios_bp.route('/')
 def dashboard_relatorios():
-    anos = list(range(2024, date.today().year + 2))
+    anos = list(range(2024, datetime.now(CLINIC_TIMEZONE).year + 2))
     meses = [
         (1, 'Janeiro'), (2, 'Fevereiro'), (3, 'Março'), (4, 'Abril'),
         (5, 'Maio'), (6, 'Junho'), (7, 'Julho'), (8, 'Agosto'),
@@ -18,7 +19,7 @@ def dashboard_relatorios():
 @relatorios_bp.route('/mensal')
 def relatorio_mensal_view():
     ano = request.args.get('ano', type=int, default=date.today().year)
-    mes = request.args.get('mes', type=int, default=date.today().month)
+    mes = request.args.get('mes', type=int, default=datetime.now(CLINIC_TIMEZONE).month)
     relatorio = relatorio_mensal(ano, mes)
     return render_template('relatorio_mensal.html', relatorio=relatorio, ano=ano, mes=mes)
 

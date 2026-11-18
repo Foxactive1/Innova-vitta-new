@@ -4,6 +4,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from datetime import datetime, date, timezone, timedelta
 from core.models import db, Consulta, Paciente, Medico, Servico
 from core.utils import validar_valor, parse_data_hora
+from core.time_utils import CLINIC_TIMEZONE
 
 consultas_bp = Blueprint('consultas', __name__, url_prefix='/consultas')
 
@@ -95,13 +96,16 @@ def nova_consulta():
             flash('Não é possível agendar no passado.', 'danger')
             return redirect(url_for('consultas.nova_consulta'))
 
-        # Verifica conflito (sobreposição de 1 hora)
-        fim_consulta = data_hora + timedelta(hours=1)
+        # Duracao padrao atual: 60 minutos. Evita aritmetica sobre coluna SQL,
+        # mantendo compatibilidade entre SQLite e PostgreSQL.
+        duracao = timedelta(hours=1)
+        fim_consulta = data_hora + duracao
+        inicio_minimo = data_hora - duracao
         conflito = Consulta.query.filter(
             Consulta.medico_id == medico_id,
             Consulta.status != 'cancelada',
             Consulta.data_hora < fim_consulta,
-            Consulta.data_hora + timedelta(hours=1) > data_hora
+            Consulta.data_hora > inicio_minimo
         ).first()
         if conflito:
             flash('Horário já ocupado (ou sobreposto).', 'danger')
@@ -131,7 +135,7 @@ def nova_consulta():
         return redirect(url_for('consultas.listar_consultas'))
 
     return render_template('consultas_form.html', pacientes=pacientes, medicos=medicos,
-                           servicos=servicos, hoje=date.today().isoformat())
+                           servicos=servicos, hoje=datetime.now(CLINIC_TIMEZONE).date().isoformat())
 
 @consultas_bp.route('/<int:cid>/confirmar', methods=['POST'])
 def confirmar_consulta(cid):

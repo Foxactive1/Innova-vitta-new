@@ -1,6 +1,8 @@
 import json
 from datetime import datetime, date, timezone, timedelta
 
+from .time_utils import local_to_utc, CLINIC_TIMEZONE
+
 from sqlalchemy import func
 
 from .models import (
@@ -83,7 +85,7 @@ def parse_data_hora(data_str, hora_str):
             '%Y-%m-%d %H:%M'
         )
 
-        return dt.replace(tzinfo=timezone.utc)
+        return local_to_utc(dt)
 
     except (ValueError, TypeError):
         return None
@@ -110,30 +112,15 @@ def parse_data(data_str):
 
 def inicio_mes(ano, mes):
     """Retorna o primeiro instante do mês em UTC."""
-    return datetime(
-        ano,
-        mes,
-        1,
-        tzinfo=timezone.utc
-    )
+    return local_to_utc(datetime(ano, mes, 1, tzinfo=CLINIC_TIMEZONE))
 
 
 def inicio_proximo_mes(ano, mes):
     """Retorna o primeiro instante do próximo mês em UTC."""
     if mes == 12:
-        return datetime(
-            ano + 1,
-            1,
-            1,
-            tzinfo=timezone.utc
-        )
+        return local_to_utc(datetime(ano + 1, 1, 1, tzinfo=CLINIC_TIMEZONE))
 
-    return datetime(
-        ano,
-        mes + 1,
-        1,
-        tzinfo=timezone.utc
-    )
+    return local_to_utc(datetime(ano, mes + 1, 1, tzinfo=CLINIC_TIMEZONE))
 
 
 # ============================================================
@@ -272,7 +259,7 @@ def estatisticas_gerais():
     # PostgreSQL / Neon
     # --------------------------------------------------------
 
-    hoje = date.today()
+    hoje = datetime.now(CLINIC_TIMEZONE).date()
 
     inicio = datetime(
         hoje.year - 1,

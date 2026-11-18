@@ -1,4 +1,5 @@
 import os
+from datetime import timedelta
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -51,9 +52,12 @@ class Config:
     ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "admin")
     ADMIN_ROLE = os.environ.get("ADMIN_ROLE", "admin")
     ADMIN_PASSWORD_HASH = os.environ.get("ADMIN_PASSWORD_HASH")
-    ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD")
+    # Senhas em texto puro nao sao aceitas pelo fluxo de autenticacao.
 
     # Segurança de sessão.
+    PERMANENT_SESSION_LIFETIME = timedelta(minutes=30)
+    SESSION_REFRESH_EACH_REQUEST = True
+    MAX_CONTENT_LENGTH = 16 * 1024 * 1024
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"
     SESSION_COOKIE_SECURE = _env_bool("SESSION_COOKIE_SECURE", not DEBUG)
