@@ -1,7 +1,7 @@
 # InNova Vitta+ 🏥
 
 [![Python](https://img.shields.io/badge/Python-3.12-blue?style=for-the-badge&logo=python)](https://www.python.org/)
-[![Flask](https://img.shields.io/badge/Flask-3.0-green?style=for-the-badge&logo=flask)](https://flask.palletsprojects.com/)
+[![Flask](https://img.shields.io/badge/Flask-2.3-green?style=for-the-badge&logo=flask)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/Database-SQLite-lightgrey?style=for-the-badge&logo=sqlite)](https://www.sqlite.org/)
 [![Bootstrap](https://img.shields.io/badge/Bootstrap-5.3-purple?style=for-the-badge&logo=bootstrap)](https://getbootstrap.com/)
 [![License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](LICENSE)
@@ -47,9 +47,9 @@ Desenvolvido pela **InNovaIdeia Assessoria em Tecnologia**, o projeto segue boas
 
 | Camada | Tecnologia |
 |:---|:---|
-| **Backend** | Python 3.12 + Flask 3.0+ |
+| **Backend** | Python 3.12 + Flask 2.3.3 |
 | **ORM** | SQLAlchemy 2.0+ |
-| **Banco de Dados** | SQLite (preparado para migração a PostgreSQL) |
+| **Banco de Dados** | SQLite para desenvolvimento; PostgreSQL para produção |
 | **Frontend** | Bootstrap 5.3 + Jinja2 Templates |
 | **Utilitários** | python-dotenv, Bootstrap Icons |
 
@@ -139,12 +139,15 @@ Acesse em: [http://localhost:5000](http://localhost:5000)
 
 ## 🗺️ Roadmap
 
-- [ ] Autenticação e autorização com Flask-Login
-- [ ] Proteção CSRF com Flask-WTF
+- [x] Autenticação de sessão com Flask-Login (usuário administrativo único)
+- [x] Proteção CSRF com Flask-WTF
 - [ ] Sistema de notificações por SMS e E-mail
 - [ ] Dashboard avançado com Chart.js
-- [ ] Testes automatizados com pytest
-- [ ] Migração para PostgreSQL em produção
+- [x] Testes unitários iniciais com pytest e GitHub Actions
+- [x] Integração de Flask-Migrate (baseline ainda requer revisão)
+- [ ] Testes de integração e concorrência
+- [ ] RBAC persistido e isolamento multi-clínica
+- [ ] Homologação de PostgreSQL em produção
 - [ ] API REST para integração com apps mobile
 - [ ] Exportação de prontuários em PDF
 
@@ -162,5 +165,5 @@ Fundador da InNovaIdeia Assessoria em Tecnologia — Franca/SP, Brasil
 
 ---
 
-> **Versão:** 1.0.0 | **Última atualização:** Agosto de 2026  
+> **Versão:** 1.1.0 | **Última atualização:** Novembro de 2026  
 > Desenvolvido com 💙 por [InNovaIdeia](https://innovaideia-github-io.vercel.app) — Transformando ideias em soluções tecnológicas.
