@@ -185,7 +185,7 @@ def create_app(config_object="config.Config"):
             .limit(10)
             .all()
         )
-        return jsonify([p.to_dict() for p in pacientes])
+        return jsonify([p.to_dict_resumo() for p in pacientes])
 
     @app.route("/api/horarios-disponiveis")
     def api_horarios_disponiveis():
