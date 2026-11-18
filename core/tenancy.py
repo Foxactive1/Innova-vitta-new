@@ -43,6 +43,8 @@ def _assign_and_validate_tenant(session, flush_context, instances):
     for obj in session.deleted:
         if isinstance(obj, AuditLog):
             raise PermissionError("A trilha de auditoria é somente de acréscimo.")
+        if isinstance(obj, TenantMixin) and obj.tenant_id != tenant_id:
+            raise PermissionError("Não é permitido excluir dados de outra clínica.")
     for obj in session.dirty:
         if isinstance(obj, AuditLog):
             raise PermissionError("A trilha de auditoria é somente de acréscimo.")
