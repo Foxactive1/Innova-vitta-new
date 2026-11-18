@@ -21,7 +21,7 @@ from routes.pacientes import pacientes_bp
 from routes.receitas import receitas_bp
 from routes.relatorios import relatorios_bp
 from routes.servicos import servicos_bp
-from core.time_utils import local_day_utc_bounds
+from core.time_utils import CLINIC_TIMEZONE, local_day_utc_bounds
 
 
 def create_app(config_object="config.Config"):
@@ -110,7 +110,7 @@ def create_app(config_object="config.Config"):
 
     @app.route("/")
     def index():
-        hoje = datetime.now().astimezone().date()
+        hoje = datetime.now(CLINIC_TIMEZONE).date()
         now_utc = datetime.now(timezone.utc)
 
         inicio_hoje, fim_hoje = local_day_utc_bounds(hoje)
