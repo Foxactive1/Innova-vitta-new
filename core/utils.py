@@ -1,6 +1,8 @@
 import json
 from datetime import datetime, date, timezone, timedelta
 
+from .time_utils import local_to_utc
+
 from sqlalchemy import func
 
 from .models import (
@@ -83,7 +85,7 @@ def parse_data_hora(data_str, hora_str):
             '%Y-%m-%d %H:%M'
         )
 
-        return dt.replace(tzinfo=timezone.utc)
+        return local_to_utc(dt)
 
     except (ValueError, TypeError):
         return None
