@@ -36,4 +36,6 @@ def test_rbac_denies_unknown_endpoints_and_limits_auditor_to_reads():
     assert role_allowed("consultas.nova_consulta", "POST", "recepcao")
     assert role_allowed("admin_auditoria", "GET", "auditor")
     assert not role_allowed("admin_auditoria", "GET", "medico")
+    assert not role_allowed("pacientes.remover_paciente", "POST", "recepcao")
+    assert not role_allowed("consultas.realizar_consulta", "POST", "recepcao")
     assert role_allowed("anything", "DELETE", "admin")
