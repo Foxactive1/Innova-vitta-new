@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app
 from sqlalchemy.orm import joinedload
 from sqlalchemy.exc import SQLAlchemyError
 from datetime import datetime, date, timezone
@@ -119,9 +119,10 @@ def nova_consulta():
         try:
             db.session.add(consulta)
             db.session.commit()
-        except SQLAlchemyError as e:
+        except SQLAlchemyError:
             db.session.rollback()
-            flash(f'Erro ao agendar: {str(e)}', 'danger')
+            current_app.logger.exception("Falha ao persistir agendamento")
+            flash('Não foi possível concluir o agendamento. Tente novamente.', 'danger')
             return redirect(url_for('consultas.nova_consulta'))
 
         flash(f'Consulta agendada! Serviço: {servico.nome} - R$ {float(servico.valor):.2f}', 'success')
