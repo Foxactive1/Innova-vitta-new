@@ -80,6 +80,8 @@ def upgrade():
             batch_op.add_column(sa.Column("tenant_id", sa.Integer(), nullable=True))
             batch_op.create_foreign_key(f"fk_{table}_tenant_id_tenant", "tenant", ["tenant_id"], ["id"])
         op.execute(sa.text(f"UPDATE {table} SET tenant_id = 1 WHERE tenant_id IS NULL"))
+        with op.batch_alter_table(table) as batch_op:
+            batch_op.alter_column("tenant_id", existing_type=sa.Integer(), nullable=False)
         op.create_index(f"ix_{table}_tenant_id", table, ["tenant_id"])
 
 
