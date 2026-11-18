@@ -129,6 +129,12 @@ flask shell
 >>> exit()
 ```
 
+Como `create_all()` já cria o schema atual completo no ambiente descartável, marque a revisão incremental como aplicada para não tentar adicioná-la novamente:
+
+```bash
+flask --app app db stamp head
+```
+
 Gere um hash de senha e crie o administrador persistente:
 
 ```bash
