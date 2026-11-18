@@ -10,7 +10,7 @@
 - RBAC centralizado com negação por padrão para endpoints não mapeados.
 - Consultas ORM de entidades clínicas são filtradas pelo tenant ativo; novos registros recebem o tenant da sessão.
 - Acesso e alteração a prontuários/consultas/receitas/exames geram eventos de auditoria sem conteúdo clínico.
-- Login limitado a 5 tentativas por minuto e 20 por hora por IP.
+- Login limitado a 5 tentativas por minuto e 20 por hora por combinação IP/identificador, além de 30 por hora por IP.
 - Erros internos de persistência são registrados no log, sem exibir detalhes SQL ao usuário.
 - Flask-Migrate está integrado para versionamento do schema.
 - Testes unitários e workflow de CI foram adicionados.
