@@ -273,6 +273,32 @@ def create_app(config_object="config.Config"):
             }
         )
 
+    @app.route("/admin/auditoria")
+    def admin_auditoria():
+        """Consulta paginada dos eventos de auditoria da clínica ativa."""
+        tenant_id = getattr(current_user, "tenant_id", None)
+        eventos = (
+            AuditLog.query.filter_by(tenant_id=tenant_id)
+            .order_by(AuditLog.created_at.desc(), AuditLog.id.desc())
+            .limit(200)
+            .all()
+        )
+        return jsonify([
+            {
+                "id": item.id,
+                "timestamp": item.created_at.isoformat() if item.created_at else None,
+                "user_id": item.user_id,
+                "action": item.action,
+                "resource_type": item.resource_type,
+                "resource_id": item.resource_id,
+                "endpoint": item.endpoint,
+                "method": item.http_method,
+                "status_code": item.status_code,
+                "ip_address": item.ip_address,
+            }
+            for item in eventos
+        ])
+
     @app.cli.command("create-user")
     @click.option("--username", required=True)
     @click.option("--email", required=True)
